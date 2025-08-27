@@ -3,17 +3,64 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ChevronLeft, ChevronRight, CheckCircle } from "lucide-react";
+import UseCaseSelection from "@/components/create-agent/UseCaseSelection";
+import AgentDetailsForm from "@/components/create-agent/AgentDetailsForm";
+import VoiceLanguageSettings from "@/components/create-agent/VoiceLanguageSettings";
+import KnowledgeBaseForm from "@/components/create-agent/KnowledgeBaseForm";
+import EvaluationDataCollection from "@/components/create-agent/EvaluationDataCollection";
 
 const steps = [
   "Choose Use Case",
   "Agent Details", 
-  "Voice Settings",
+  "Voice & Language Settings",
   "Knowledge Base",
+  "Evaluation & Data Collection",
   "Preview & Test"
 ];
 
 export default function CreateAgent() {
   const [currentStep, setCurrentStep] = useState(0);
+  
+  // Form data state
+  const [selectedUseCase, setSelectedUseCase] = useState<string | null>(null);
+  const [agentDetails, setAgentDetails] = useState({
+    agentName: '',
+    agentPersona: '',
+    agentGoal: '',
+    greetingMessage: '',
+    instructions: '',
+    responseVariability: ''
+  });
+  const [voiceLanguageSettings, setVoiceLanguageSettings] = useState({
+    tone: '',
+    voice: '',
+    defaultLanguage: '',
+    additionalLanguages: [] as string[]
+  });
+  const [knowledgeBase, setKnowledgeBase] = useState({
+    uploadedFiles: [] as string[],
+    knowledgeUrls: [] as string[]
+  });
+  const [evaluationData, setEvaluationData] = useState({
+    evaluationCriteria: [] as any[],
+    dataCollectionItems: [] as any[]
+  });
+
+  const updateAgentDetails = (field: string, value: string) => {
+    setAgentDetails(prev => ({ ...prev, [field]: value }));
+  };
+
+  const updateVoiceLanguageSettings = (field: string, value: string | string[]) => {
+    setVoiceLanguageSettings(prev => ({ ...prev, [field]: value }));
+  };
+
+  const updateKnowledgeBase = (field: string, value: string[]) => {
+    setKnowledgeBase(prev => ({ ...prev, [field]: value }));
+  };
+
+  const updateEvaluationData = (field: string, value: any[]) => {
+    setEvaluationData(prev => ({ ...prev, [field]: value }));
+  };
 
   const nextStep = () => {
     if (currentStep < steps.length - 1) {
@@ -60,110 +107,48 @@ export default function CreateAgent() {
       <Card className="shadow-soft border-card-border min-h-[400px]">
         <CardContent className="p-8">
           {currentStep === 0 && (
-            <div className="space-y-6">
-              <h3 className="text-xl font-semibold mb-6">Choose Your Use Case</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[
-                  {
-                    title: "Appointment Scheduling",
-                    description: "Book meetings and manage calendars automatically",
-                    icon: "📅",
-                  },
-                  {
-                    title: "Lead Generation", 
-                    description: "Qualify prospects and gather contact information",
-                    icon: "🎯",
-                  },
-                  {
-                    title: "Customer Support",
-                    description: "Handle inquiries and resolve common issues",
-                    icon: "🎧",
-                  }
-                ].map((useCase) => (
-                  <Button
-                    key={useCase.title}
-                    variant="outline"
-                    className="h-auto p-6 text-left hover:bg-primary-light hover:border-primary transition-all"
-                  >
-                    <div className="space-y-2">
-                      <div className="text-2xl">{useCase.icon}</div>
-                      <h4 className="font-medium">{useCase.title}</h4>
-                      <p className="text-sm text-muted-foreground">{useCase.description}</p>
-                    </div>
-                  </Button>
-                ))}
-              </div>
-            </div>
+            <UseCaseSelection 
+              selectedUseCase={selectedUseCase}
+              onSelect={setSelectedUseCase}
+            />
           )}
 
           {currentStep === 1 && (
-            <div className="space-y-6">
-              <h3 className="text-xl font-semibold mb-6">Agent Details</h3>
-              <div className="space-y-4 max-w-md">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Agent Name</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g., Sarah - Appointment Assistant"
-                    className="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Greeting Message</label>
-                  <textarea 
-                    placeholder="Hi! I'm Sarah, your appointment assistant. How can I help you today?"
-                    rows={3}
-                    className="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
-                  />
-                </div>
-              </div>
-            </div>
+            <AgentDetailsForm 
+              formData={agentDetails}
+              onUpdate={updateAgentDetails}
+            />
           )}
 
           {currentStep === 2 && (
-            <div className="space-y-6">
-              <h3 className="text-xl font-semibold mb-6">Voice Settings</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-3">Tone of Voice</label>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {["Friendly", "Professional", "Neutral"].map((tone) => (
-                      <Button
-                        key={tone}
-                        variant="outline"
-                        className="hover:bg-primary-light hover:border-primary"
-                      >
-                        {tone}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <VoiceLanguageSettings 
+              formData={voiceLanguageSettings}
+              onUpdate={updateVoiceLanguageSettings}
+            />
           )}
 
           {currentStep === 3 && (
-            <div className="space-y-6">
-              <h3 className="text-xl font-semibold mb-6">Knowledge Base</h3>
-              <div className="space-y-4">
-                <Button variant="outline" className="w-full h-20 border-dashed">
-                  <div className="text-center">
-                    <p className="font-medium">Upload FAQ Document</p>
-                    <p className="text-sm text-muted-foreground">Drag & drop CSV or PDF files here</p>
-                  </div>
-                </Button>
-              </div>
-            </div>
+            <KnowledgeBaseForm 
+              formData={knowledgeBase}
+              onUpdate={updateKnowledgeBase}
+            />
           )}
 
           {currentStep === 4 && (
+            <EvaluationDataCollection 
+              formData={evaluationData}
+              onUpdate={updateEvaluationData}
+            />
+          )}
+
+          {currentStep === 5 && (
             <div className="space-y-6">
               <h3 className="text-xl font-semibold mb-6">Preview & Test</h3>
               <div className="bg-muted/30 rounded-lg p-6 text-center">
                 <CheckCircle className="h-12 w-12 text-success mx-auto mb-4" />
                 <h4 className="text-lg font-medium mb-2">Agent Created Successfully!</h4>
                 <p className="text-muted-foreground mb-6">
-                  Your voice agent "Sarah - Appointment Assistant" is ready to use.
+                  Your voice agent "{agentDetails.agentName || 'Your Agent'}" is ready to use.
                 </p>
                 <Button variant="outline" className="mr-3">
                   Test Agent
