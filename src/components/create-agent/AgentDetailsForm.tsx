@@ -21,36 +21,56 @@ export default function AgentDetailsForm({ formData, onUpdate }: AgentDetailsFor
   return (
     <div className="space-y-6">
       <h3 className="text-xl font-semibold">Agent Details</h3>
-      <div className="space-y-6 max-w-2xl">
-        {/* Agent Name */}
-        <div className="space-y-2">
-          <Label htmlFor="agentName" className="text-sm font-medium">
-            Agent Name *
-          </Label>
-          <Input
-            id="agentName"
-            type="text"
-            placeholder="e.g., Sarah - Appointment Assistant"
-            value={formData.agentName}
-            onChange={(e) => onUpdate('agentName', e.target.value)}
-            className="w-full"
-          />
-        </div>
+      <div className="space-y-6 max-w-4xl">
+        {/* Top 3 fields in horizontal line */}
+        <div className="grid grid-cols-3 gap-6">
+          {/* Agent Name */}
+          <div className="space-y-2">
+            <Label htmlFor="agentName" className="text-sm font-medium">
+              Agent Name *
+            </Label>
+            <Input
+              id="agentName"
+              type="text"
+              placeholder="e.g., Sarah - Appointment Assistant"
+              value={formData.agentName}
+              onChange={(e) => onUpdate('agentName', e.target.value)}
+              className="w-full"
+            />
+          </div>
 
-        {/* Agent Persona */}
-        <div className="space-y-2">
-          <Label htmlFor="agentPersona" className="text-sm font-medium">
-            Agent Persona *
-          </Label>
-          <Select value={formData.agentPersona} onValueChange={(value) => onUpdate('agentPersona', value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select persona" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="male">Male</SelectItem>
-              <SelectItem value="female">Female</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Agent Persona */}
+          <div className="space-y-2">
+            <Label htmlFor="agentPersona" className="text-sm font-medium">
+              Agent Persona *
+            </Label>
+            <Select value={formData.agentPersona} onValueChange={(value) => onUpdate('agentPersona', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select persona" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Response Variability */}
+          <div className="space-y-2">
+            <Label htmlFor="responseVariability" className="text-sm font-medium">
+              Response Variability *
+            </Label>
+            <Select value={formData.responseVariability} onValueChange={(value) => onUpdate('responseVariability', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select response style" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="consistent">Consistent & predictable responses</SelectItem>
+                <SelectItem value="balanced">Balanced creativity & consistency</SelectItem>
+                <SelectItem value="creative">Highly creative & varied responses</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Agent Goal */}
@@ -98,7 +118,7 @@ export default function AgentDetailsForm({ formData, onUpdate }: AgentDetailsFor
             <Textarea
               id="instructions"
               placeholder="Provide detailed instructions for how the agent should behave..."
-              rows={4}
+              rows={20}
               value={formData.instructions}
               onChange={(e) => onUpdate('instructions', e.target.value)}
               className="resize-none"
@@ -110,22 +130,6 @@ export default function AgentDetailsForm({ formData, onUpdate }: AgentDetailsFor
           </div>
         </div>
 
-        {/* Response Variability */}
-        <div className="space-y-2">
-          <Label htmlFor="responseVariability" className="text-sm font-medium">
-            Response Variability *
-          </Label>
-          <Select value={formData.responseVariability} onValueChange={(value) => onUpdate('responseVariability', value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select response style" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="consistent">Consistent & predictable responses</SelectItem>
-              <SelectItem value="balanced">Balanced creativity & consistency</SelectItem>
-              <SelectItem value="creative">Highly creative & varied responses</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
       </div>
     </div>
   );
