@@ -110,13 +110,13 @@ export default function UseCaseSelection({ selectedUseCase, onSelect }: UseCaseS
             <Button
               key={useCase.title}
               variant={selectedUseCase === useCase.title ? "default" : "outline"}
-              className="h-auto p-4 text-left hover:bg-primary-light hover:border-primary transition-all flex flex-col items-start justify-start"
+              className="h-32 p-4 text-left hover:bg-primary-light hover:border-primary transition-all flex flex-col items-start justify-start overflow-hidden"
               onClick={() => onSelect(useCase.title)}
             >
-              <div className="w-full space-y-3">
-                <div className="text-2xl mb-2">{useCase.icon}</div>
-                <h5 className="font-medium text-sm leading-tight">{useCase.title}</h5>
-                <p className="text-xs text-muted-foreground leading-relaxed">{useCase.description}</p>
+              <div className="w-full h-full flex flex-col overflow-hidden">
+                <div className="text-2xl mb-2 flex-shrink-0">{useCase.icon}</div>
+                <h5 className="font-medium text-sm leading-tight mb-2 flex-shrink-0">{useCase.title}</h5>
+                <p className="text-xs text-muted-foreground leading-relaxed flex-1 overflow-hidden text-ellipsis">{useCase.description}</p>
               </div>
             </Button>
           ))}
@@ -131,13 +131,13 @@ export default function UseCaseSelection({ selectedUseCase, onSelect }: UseCaseS
             <Button
               key={useCase.title}
               variant={selectedUseCase === useCase.title ? "default" : "outline"}
-              className="h-auto p-4 text-left hover:bg-primary-light hover:border-primary transition-all flex flex-col items-start justify-start"
+              className="h-32 p-4 text-left hover:bg-primary-light hover:border-primary transition-all flex flex-col items-start justify-start overflow-hidden"
               onClick={() => onSelect(useCase.title)}
             >
-              <div className="w-full space-y-3">
-                <div className="text-2xl mb-2">{useCase.icon}</div>
-                <h5 className="font-medium text-sm leading-tight">{useCase.title}</h5>
-                <p className="text-xs text-muted-foreground leading-relaxed">{useCase.description}</p>
+              <div className="w-full h-full flex flex-col overflow-hidden">
+                <div className="text-2xl mb-2 flex-shrink-0">{useCase.icon}</div>
+                <h5 className="font-medium text-sm leading-tight mb-2 flex-shrink-0">{useCase.title}</h5>
+                <p className="text-xs text-muted-foreground leading-relaxed flex-1 overflow-hidden text-ellipsis">{useCase.description}</p>
               </div>
             </Button>
           ))}
