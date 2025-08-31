@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, ChevronRight, CheckCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle, Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 import UseCaseSelection from "@/components/create-agent/UseCaseSelection";
 import AgentDetailsForm from "@/components/create-agent/AgentDetailsForm";
 import VoiceLanguageSettings from "@/components/create-agent/VoiceLanguageSettings";
@@ -20,6 +21,8 @@ const steps = [
 
 export default function CreateAgent() {
   const [currentStep, setCurrentStep] = useState(0);
+  const [isCreatingAgent, setIsCreatingAgent] = useState(false);
+  const { toast } = useToast();
   
   // Form data state
   const [selectedUseCase, setSelectedUseCase] = useState<string | null>(null);
@@ -75,6 +78,69 @@ export default function CreateAgent() {
   };
 
   const progress = ((currentStep + 1) / steps.length) * 100;
+
+  const createAgentAPI = async () => {
+    setIsCreatingAgent(true);
+    
+    try {
+      const agentPayload = {
+        name: agentDetails.agentName,
+        conversation_config: {
+          agent: {
+            prompt: {
+              prompt: agentDetails.instructions || "You are a helpful assistant."
+            },
+            first_message: agentDetails.greetingMessage || "Hello! How can I help you today?",
+            language: voiceLanguageSettings.defaultLanguage || "en"
+          },
+          tts: {
+            voice_id: voiceLanguageSettings.voice || "EXAVITQu4vr4xnSDxMaL" // Default to Sarah
+          }
+        },
+        platform_settings: {
+          widget_config: {
+            accent_color: "#000000",
+            background_color: "#ffffff",
+            text_color: "#000000"
+          }
+        },
+        tags: selectedUseCase ? [selectedUseCase] : []
+      };
+
+      const response = await fetch('https://api.elevenlabs.io/v1/convai/agents/create', {
+        method: 'POST',
+        headers: {
+          'xi-api-key': 'org_79413f4f5b5e71825509bba5bc42653e21f7a807d4ceddcac8abeaec9e57147657b54d539eb4e7e9668a69',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(agentPayload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create agent: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      toast({
+        title: "Agent Created Successfully!",
+        description: `Agent ID: ${result.agent_id}`,
+      });
+
+      // You could also redirect to campaigns page or store the agent_id
+      console.log('Created Agent ID:', result.agent_id);
+      
+    } catch (error) {
+      console.error('Error creating agent:', error);
+      toast({
+        title: "Error Creating Agent",
+        description: "Failed to create agent. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingAgent(false);
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -153,8 +219,13 @@ export default function CreateAgent() {
                 <Button variant="outline" className="mr-3">
                   Test Agent
                 </Button>
-                <Button>
-                  Use in Campaign
+                <Button 
+                  onClick={createAgentAPI}
+                  disabled={isCreatingAgent}
+                  className="flex items-center gap-2"
+                >
+                  {isCreatingAgent && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {isCreatingAgent ? 'Creating Agent...' : 'Use in Campaign'}
                 </Button>
               </div>
             </div>
