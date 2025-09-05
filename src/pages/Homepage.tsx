@@ -13,10 +13,12 @@ import { Phone, Users, Globe, Check, Star, Calendar as CalendarIcon, Mail, MapPi
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Homepage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isBookingDemo, setIsBookingDemo] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [contactForm, setContactForm] = useState({
@@ -102,21 +104,20 @@ const Homepage = () => {
             </nav>
 
             <div className="flex items-center space-x-4">
-              <Dialog open={isBookingDemo} onOpenChange={setIsBookingDemo}>
-                <DialogTrigger asChild>
-                  <Button className="bg-primary hover:bg-primary-hover">Book a Demo</Button>
-                </DialogTrigger>
-                <BookDemoModal 
-                  selectedDate={selectedDate}
-                  setSelectedDate={setSelectedDate}
-                  demoForm={demoForm}
-                  setDemoForm={setDemoForm}
-                  onBookDemo={handleDemoBooking}
-                />
-              </Dialog>
-              <Button variant="outline" onClick={() => navigate("/login")}>
-                Sign In
-              </Button>
+              {user ? (
+                <Button onClick={() => navigate("/dashboard")}>
+                  Go to Dashboard
+                </Button>
+              ) : (
+                <>
+                  <Button variant="outline" onClick={() => navigate("/signup")}>
+                    Get Started
+                  </Button>
+                  <Button onClick={() => navigate("/login")}>
+                    Sign In
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -579,16 +580,14 @@ const PricingCard = ({ name, price, period, features, popular = false }: {
   popular?: boolean;
 }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   const handleSubscribe = () => {
-    // Check if user is authenticated (this is a placeholder - implement actual auth check)
-    const isAuthenticated = false; // Replace with actual auth state
-    
-    if (!isAuthenticated) {
+    if (!user) {
       navigate("/login");
     } else {
-      // Handle subscription logic here
-      console.log(`Subscribing to ${name} plan`);
+      // Handle subscription logic here - navigate to billing/subscription page
+      navigate("/dashboard");
     }
   };
 

@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate, Link } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Check, X } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const Signup = () => {
   const navigate = useNavigate();
+  const { user, signUp, signInWithGoogle } = useAuth();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -22,6 +24,13 @@ const Signup = () => {
     confirmPassword: ""
   });
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const passwordRequirements = [
     { text: "At least 8 characters", met: formData.password.length >= 8 },
@@ -65,49 +74,24 @@ const Signup = () => {
 
     setIsLoading(true);
 
-    try {
-      // TODO: Implement Supabase user registration
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
-      toast({
-        title: "Account created!",
-        description: "Welcome to OrbitalConnect AI. Please check your email to verify your account.",
-      });
-      
-      // Navigate to dashboard after successful signup
-      navigate("/");
-    } catch (error) {
-      toast({
-        title: "Registration failed",
-        description: "Please try again or contact support if the issue persists.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
+    const { error } = await signUp(
+      formData.email, 
+      formData.password, 
+      formData.fullName, 
+      formData.company
+    );
+    
+    if (!error) {
+      navigate('/login');
     }
+    
+    setIsLoading(false);
   };
 
   const handleGoogleSignUp = async () => {
     setIsLoading(true);
-    try {
-      // TODO: Implement Google OAuth with Supabase
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
-      toast({
-        title: "Account created!",
-        description: "Welcome to OrbitalConnect AI.",
-      });
-      
-      navigate("/");
-    } catch (error) {
-      toast({
-        title: "Google sign-up failed",
-        description: "Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    await signInWithGoogle();
+    setIsLoading(false);
   };
 
   return (

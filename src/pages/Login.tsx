@@ -1,15 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate, Link } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { user, signIn, signInWithGoogle } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -17,53 +17,30 @@ const Login = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    try {
-      // TODO: Implement Supabase authentication
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
-      toast({
-        title: "Welcome back!",
-        description: "You have been successfully logged in.",
-      });
-      
-      // Navigate to dashboard after successful login
-      navigate("/");
-    } catch (error) {
-      toast({
-        title: "Login failed",
-        description: "Please check your credentials and try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
+    const { error } = await signIn(formData.email, formData.password);
+    
+    if (!error) {
+      navigate('/dashboard');
     }
+    
+    setIsLoading(false);
   };
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
-    try {
-      // TODO: Implement Google OAuth with Supabase
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
-      toast({
-        title: "Welcome back!",
-        description: "You have been successfully logged in with Google.",
-      });
-      
-      navigate("/");
-    } catch (error) {
-      toast({
-        title: "Google sign-in failed",
-        description: "Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    await signInWithGoogle();
+    setIsLoading(false);
   };
 
   return (
