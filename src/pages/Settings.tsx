@@ -1,9 +1,65 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/hooks/useProfile";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Settings() {
+  const [fullName, setFullName] = useState('');
+  const [company, setCompany] = useState('');
+  const [phone, setPhone] = useState('');
+  const [campaignNotifications, setCampaignNotifications] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  const { user } = useAuth();
+  const { profile, updateProfile, loading } = useProfile();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (profile) {
+      setFullName(profile.full_name || '');
+      setCompany(profile.company || '');
+      setPhone(profile.phone || '');
+    }
+  }, [profile]);
+
+  const handleSaveChanges = async () => {
+    if (!user) return;
+
+    setIsSaving(true);
+    try {
+      const result = await updateProfile({
+        full_name: fullName,
+        company: company,
+        phone: phone,
+      });
+
+      if (result?.success) {
+        toast({
+          title: "Settings saved",
+          description: "Your account settings have been updated successfully.",
+        });
+      } else {
+        throw new Error(result?.error || 'Failed to update profile');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
@@ -25,7 +81,8 @@ export default function Settings() {
               <label className="text-sm font-medium">Full Name</label>
               <input 
                 type="text" 
-                defaultValue="John Smith"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
                 className="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
               />
             </div>
@@ -33,15 +90,17 @@ export default function Settings() {
               <label className="text-sm font-medium">Email Address</label>
               <input 
                 type="email" 
-                defaultValue="john.smith@company.com"
-                className="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
+                value={user?.email || ''}
+                disabled
+                className="w-full p-3 border border-input rounded-lg bg-muted text-muted-foreground"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Company Name</label>
               <input 
                 type="text" 
-                defaultValue="Acme Corp"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
                 className="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
               />
             </div>
@@ -49,14 +108,18 @@ export default function Settings() {
               <label className="text-sm font-medium">Phone Number</label>
               <input 
                 type="tel" 
-                defaultValue="+1 (555) 123-4567"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="919999958112"
                 className="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
               />
             </div>
           </div>
           <Separator />
           <div className="flex justify-end">
-            <Button>Save Changes</Button>
+            <Button onClick={handleSaveChanges} disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -75,52 +138,10 @@ export default function Settings() {
                   Get notified when campaigns start, complete, or encounter issues
                 </p>
               </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-medium">Daily Summary</h4>
-                <p className="text-sm text-muted-foreground">
-                  Receive daily performance summaries via email
-                </p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-medium">System Updates</h4>
-                <p className="text-sm text-muted-foreground">
-                  Get notified about new features and platform updates
-                </p>
-              </div>
-              <Switch />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Voice Settings */}
-      <Card className="shadow-soft border-card-border">
-        <CardHeader>
-          <CardTitle>Default Voice Settings</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Default Voice Tone</label>
-              <select className="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent">
-                <option>Professional</option>
-                <option>Friendly</option>
-                <option>Neutral</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Speaking Speed</label>
-              <select className="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent">
-                <option>Normal</option>
-                <option>Slow</option>
-                <option>Fast</option>
-              </select>
+              <Switch 
+                checked={campaignNotifications}
+                onCheckedChange={setCampaignNotifications}
+              />
             </div>
           </div>
         </CardContent>
@@ -133,18 +154,6 @@ export default function Settings() {
         </CardHeader>
         <CardContent className="space-y-6">
           <Button variant="outline">Change Password</Button>
-          <Separator />
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-medium">Two-Factor Authentication</h4>
-                <p className="text-sm text-muted-foreground">
-                  Add an extra layer of security to your account
-                </p>
-              </div>
-              <Button variant="outline" size="sm">Enable</Button>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Mic, Phone, BarChart3, Settings } from "lucide-react";
+import { Home, Mic, Phone, Settings, HelpCircle } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -9,15 +9,16 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 
 const navigationItems = [
-  { title: "Dashboard", url: "/", icon: Home },
+  { title: "Dashboard", url: "/dashboard", icon: Home },
   { title: "Create Agent", url: "/create-agent", icon: Mic },
   { title: "Run Campaign", url: "/run-campaign", icon: Phone },
-  { title: "Campaign Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Settings", url: "/settings", icon: Settings },
+  { title: "Support", url: "/support", icon: HelpCircle },
 ];
 
 export function AppSidebar() {
@@ -32,6 +33,9 @@ export function AppSidebar() {
       collapsible="icon"
     >
       <SidebarContent className="bg-sidebar border-sidebar-border">
+        <div className="p-2">
+          <SidebarTrigger />
+        </div>
         <SidebarGroup>
           <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>
             Navigation

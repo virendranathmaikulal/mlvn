@@ -14,6 +14,7 @@ import CreateAgent from "./pages/CreateAgent";
 import RunCampaign from "./pages/RunCampaign";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
+import Support from "./pages/Support";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,6 +56,11 @@ const App = () => (
             <Route path="/settings" element={
               <ProtectedRoute>
                 <AppLayout><Settings /></AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/support" element={
+              <ProtectedRoute>
+                <AppLayout><Support /></AppLayout>
               </ProtectedRoute>
             } />
             

@@ -1,19 +1,28 @@
 import { Button } from "@/components/ui/button";
 import { KPICard } from "@/components/dashboard/KPICard";
 import { ActivityLog } from "@/components/dashboard/ActivityLog";
-import { Phone, Calendar, Users, HeadphonesIcon, Mic, BarChart3 } from "lucide-react";
+import { Phone, Calendar, Users, HeadphonesIcon, Mic, BarChart3, TrendingUp, Target, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useProfile } from "@/hooks/useProfile";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { profile } = useProfile();
+
+  const getFirstName = () => {
+    if (profile?.full_name) {
+      return profile.full_name.split(' ')[0];
+    }
+    return 'User';
+  };
 
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="bg-gradient-brand rounded-xl p-6 text-white shadow-medium">
-        <h2 className="text-3xl font-bold mb-2">Welcome back, John!</h2>
+        <h2 className="text-3xl font-bold mb-2">Welcome back, {getFirstName()}!</h2>
         <p className="text-white/90 text-lg">
-          Ready to create amazing voice experiences for your customers?
+          Create amazing voice experiences for your customers
         </p>
       </div>
 
@@ -80,28 +89,34 @@ export default function Dashboard() {
         />
       </div>
 
+      {/* Campaign Analytics Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <KPICard
+          title="Conversion Rate"
+          value="24.8%"
+          icon={TrendingUp}
+          trend={{ value: 5.2, isPositive: true }}
+        />
+        <KPICard
+          title="Avg Call Duration"
+          value="3m 42s"
+          icon={Clock}
+          trend={{ value: 12.3, isPositive: true }}
+        />
+        <KPICard
+          title="Success Rate"
+          value="89.4%"
+          icon={Target}
+          trend={{ value: 8.7, isPositive: true }}
+        />
+      </div>
+
       {/* Activity Log */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <ActivityLog />
         </div>
         <div className="space-y-4">
-          <Button
-            onClick={() => navigate("/analytics")}
-            className="w-full h-20 bg-card border border-card-border hover:bg-muted/50 text-left p-4 shadow-soft transition-all hover:shadow-medium group"
-            variant="outline"
-          >
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                <BarChart3 className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h4 className="font-medium text-foreground">View Analytics</h4>
-                <p className="text-sm text-muted-foreground">Detailed campaign insights</p>
-              </div>
-            </div>
-          </Button>
-          
           <div className="bg-primary-light rounded-lg p-4 border border-primary/20">
             <h4 className="font-semibold text-primary mb-2">💡 Quick Tip</h4>
             <p className="text-sm text-primary/80">
