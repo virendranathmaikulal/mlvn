@@ -26,9 +26,9 @@ export function useProfile() {
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error fetching profile:', error);
       } else {
         setProfile(data);
@@ -44,16 +44,33 @@ export function useProfile() {
     if (!user) return;
 
     try {
-      const { error } = await supabase
+      // First try to update existing profile
+      const { data, error } = await supabase
         .from('profiles')
         .update(updates)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error && error.code === 'PGRST116') {
+        // Profile doesn't exist, create it
+        const { data: newData, error: insertError } = await supabase
+          .from('profiles')
+          .insert({ ...updates, user_id: user.id })
+          .select()
+          .single();
 
-      setProfile(prev => prev ? { ...prev, ...updates } : null);
+        if (insertError) throw insertError;
+        setProfile(newData);
+      } else if (error) {
+        throw error;
+      } else {
+        setProfile(data);
+      }
+
       return { success: true };
     } catch (error: any) {
+      console.error('Profile update error:', error);
       return { success: false, error: error.message };
     }
   };
