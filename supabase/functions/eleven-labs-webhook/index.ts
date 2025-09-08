@@ -1,7 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { createHmac } from "https://deno.land/std@0.190.0/node/crypto.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,15 +16,29 @@ serve(async (req) => {
     const signature = req.headers.get('x-elevenlabs-signature');
     const body = await req.text();
     
-    // Verify HMAC signature
+    // Verify HMAC signature using Web Crypto API
     const webhookSecret = Deno.env.get('ELEVENLABS_WEBHOOK_SECRET');
     if (!webhookSecret) {
       throw new Error('Webhook secret not configured');
     }
 
-    const expectedSignature = createHmac('sha256', webhookSecret)
-      .update(body)
-      .digest('hex');
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(webhookSecret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+
+    const signature_bytes = await crypto.subtle.sign(
+      'HMAC',
+      key,
+      new TextEncoder().encode(body)
+    );
+
+    const expectedSignature = Array.from(new Uint8Array(signature_bytes))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
 
     if (signature !== `sha256=${expectedSignature}`) {
       console.error('Invalid webhook signature');
