@@ -110,7 +110,7 @@ export function CampaignsList({ campaigns, onViewDetails, isLoading }: Campaigns
               <TableRow>
                 <TableHead>Campaign Name</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-center">Campaign Start Date</TableHead>
+                <TableHead className="text-center">Campaign Start</TableHead>
                 <TableHead className="text-center">Total Calls</TableHead>
                 <TableHead className="text-center">Connected</TableHead>
                 <TableHead className="text-center">Success Rate</TableHead>
@@ -129,16 +129,26 @@ export function CampaignsList({ campaigns, onViewDetails, isLoading }: Campaigns
                     {getStatusBadge(campaign.status)}
                   </TableCell>
                   <TableCell className="text-center">
-                    <span className="text-sm text-muted-foreground">
-                      {campaign.launched_at ? 
-                        new Date(campaign.launched_at).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        }) : 
-                        'Not launched'
-                      }
-                    </span>
+                    {campaign.launched_at ? (
+                      <div className="text-sm">
+                        <div className="text-foreground">
+                          {new Date(campaign.launched_at).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </div>
+                        <div className="text-muted-foreground">
+                          {new Date(campaign.launched_at).toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">Not launched</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex items-center justify-center gap-1">
