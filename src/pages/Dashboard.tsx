@@ -53,10 +53,10 @@ export default function Dashboard() {
   };
 
   return (
-    <div style={{ height: 'calc(100vh - 64px - 80px)' }} className="flex flex-col">
+    <>
       {selectedCampaignDetails ? (
-        // Campaign Details View
-        <div className="h-full flex flex-col">
+        // Campaign Details View - Use calculated height to prevent footer overlap
+        <div style={{ height: 'calc(100vh - 64px - 80px)' }} className="flex flex-col">
           {/* Breadcrumb/Navigation Header */}
           <div className="flex items-center gap-4 mb-6 pb-4 border-b flex-shrink-0">
             <Button
@@ -84,7 +84,7 @@ export default function Dashboard() {
           </div>
         </div>
       ) : (
-        // Main Dashboard View - Allow normal scrolling
+        // Main Dashboard View - Normal flow, let AppLayout handle footer positioning
         <div className="space-y-6">
           {/* Welcome Section */}
           <div className="bg-gradient-brand rounded-xl p-6 text-white shadow-medium">
@@ -148,6 +148,6 @@ export default function Dashboard() {
           />
         </div>
       )}
-    </div>
+    </>
   );
 }
