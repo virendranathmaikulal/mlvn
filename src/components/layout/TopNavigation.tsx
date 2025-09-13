@@ -18,6 +18,8 @@ const getPageTitle = (pathname: string) => {
       return "Campaign Analytics";
     case "/settings":
       return "Settings";
+    case "/support":
+      return "Support";
     default:
       return "Dashboard";
   }
