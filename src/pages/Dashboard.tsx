@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Mic, Phone } from "lucide-react";
+import { Mic, Phone, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { useDashboardData } from "@/hooks/useDashboardData";
@@ -8,8 +8,6 @@ import { DashboardFilters } from "@/components/dashboard/DashboardFilters";
 import { DashboardMetrics } from "@/components/dashboard/DashboardMetrics";
 import { CampaignsList } from "@/components/dashboard/CampaignsList";
 import { CampaignDetails } from "@/components/dashboard/CampaignDetails";
-import { DateRange } from "react-day-picker";
-import { subDays } from "date-fns";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -17,10 +15,6 @@ export default function Dashboard() {
   const { metrics, campaigns, conversations, isLoading, fetchDashboardData, fetchCampaignDetails } = useDashboardData();
   
   const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>(['all']);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: subDays(new Date(), 7),
-    to: new Date(),
-  });
   const [selectedCampaignDetails, setSelectedCampaignDetails] = useState<string | null>(null);
   const [campaignDetailsData, setCampaignDetailsData] = useState<any[]>([]);
 
@@ -34,32 +28,17 @@ export default function Dashboard() {
   const handleCampaignChange = (campaignIds: string[]) => {
     setSelectedCampaigns(campaignIds);
     const campaignsToFilter = campaignIds.includes('all') ? undefined : campaignIds;
-    fetchDashboardData(campaignsToFilter, dateRange);
-  };
-
-  const handleDateRangeChange = (newDateRange: DateRange | undefined) => {
-    setDateRange(newDateRange);
-    const campaignsToFilter = selectedCampaigns.includes('all') ? undefined : selectedCampaigns;
-    fetchDashboardData(campaignsToFilter, newDateRange);
+    fetchDashboardData(campaignsToFilter);
   };
 
   const handleClearFilters = () => {
     setSelectedCampaigns(['all']);
-    const defaultDateRange = {
-      from: subDays(new Date(), 7),
-      to: new Date(),
-    };
-    setDateRange(defaultDateRange);
-    fetchDashboardData(undefined, defaultDateRange);
+    fetchDashboardData();
   };
 
-  // Initialize with default filters on mount
+  // Initialize data on mount
   useEffect(() => {
-    const defaultDateRange = {
-      from: subDays(new Date(), 7),
-      to: new Date(),
-    };
-    fetchDashboardData(undefined, defaultDateRange);
+    fetchDashboardData();
   }, []);
 
   const handleViewDetails = async (campaignId: string) => {
@@ -122,9 +101,7 @@ export default function Dashboard() {
       <DashboardFilters
         campaigns={campaigns.map(c => ({ id: c.id, name: c.name }))}
         selectedCampaigns={selectedCampaigns}
-        dateRange={dateRange}
         onCampaignChange={handleCampaignChange}
-        onDateRangeChange={handleDateRangeChange}
         onClearFilters={handleClearFilters}
       />
 
@@ -133,15 +110,35 @@ export default function Dashboard() {
 
       {/* Campaign Details or Campaigns List */}
       {selectedCampaignDetails ? (
-        <div className="fixed inset-0 z-50 bg-background">
-          <div className="container mx-auto p-6">
-            <CampaignDetails
-              campaignId={selectedCampaignDetails}
-              campaignName={campaigns.find(c => c.id === selectedCampaignDetails)?.name || 'Campaign'}
-              conversations={campaignDetailsData}
-              onBack={handleBackToCampaigns}
-              isLoading={isLoading}
-            />
+        <div className="fixed top-0 left-0 right-0 bottom-0 z-50 bg-background flex flex-col">
+          {/* Static Header */}
+          <div className="sticky top-0 z-10 bg-background border-b p-6 shadow-sm">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                onClick={handleBackToCampaigns}
+                className="gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Dashboard
+              </Button>
+              <h1 className="text-2xl font-bold">
+                {campaigns.find(c => c.id === selectedCampaignDetails)?.name || 'Campaign'} - Details
+              </h1>
+            </div>
+          </div>
+          
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-auto">
+            <div className="container mx-auto p-6">
+              <CampaignDetails
+                campaignId={selectedCampaignDetails}
+                campaignName={campaigns.find(c => c.id === selectedCampaignDetails)?.name || 'Campaign'}
+                conversations={campaignDetailsData}
+                onBack={handleBackToCampaigns}
+                isLoading={isLoading}
+              />
+            </div>
           </div>
         </div>
       ) : (

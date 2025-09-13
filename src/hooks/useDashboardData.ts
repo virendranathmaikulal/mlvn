@@ -51,7 +51,7 @@ export function useDashboardData() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchDashboardData = async (selectedCampaigns?: string[], dateRange?: DateRange) => {
+  const fetchDashboardData = async (selectedCampaigns?: string[]) => {
     try {
       setIsLoading(true);
 
@@ -64,11 +64,6 @@ export function useDashboardData() {
         conversationsQuery = conversationsQuery.in('campaign_id', selectedCampaigns);
       }
 
-      if (dateRange?.from && dateRange?.to) {
-        conversationsQuery = conversationsQuery
-          .gte('created_at', dateRange.from.toISOString())
-          .lte('created_at', dateRange.to.toISOString());
-      }
 
       const { data: conversationsData, error: conversationsError } = await conversationsQuery;
 
@@ -129,14 +124,7 @@ export function useDashboardData() {
 
       // Process campaigns data
       const processedCampaigns: Campaign[] = campaignsData?.map(campaign => {
-        // Filter conversations by date range if specified
-        let campaignCalls = campaign.conversations || [];
-        if (dateRange?.from && dateRange?.to) {
-          campaignCalls = campaignCalls.filter((c: any) => {
-            const callDate = new Date(c.created_at);
-            return callDate >= dateRange.from! && callDate <= dateRange.to!;
-          });
-        }
+        const campaignCalls = campaign.conversations || [];
         
         const campaignConnected = campaignCalls.filter((c: any) => c.call_successful === 'success').length;
         const campaignSuccessRate = campaignCalls.length > 0 ? (campaignConnected / campaignCalls.length) * 100 : 0;

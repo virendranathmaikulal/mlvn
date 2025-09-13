@@ -1,37 +1,26 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { CalendarIcon, Filter, Search, Clock } from "lucide-react";
-import { format } from "date-fns";
-import { DateRange } from "react-day-picker";
-import { cn } from "@/lib/utils";
+import { Filter, Search } from "lucide-react";
 
 interface DashboardFiltersProps {
   campaigns: Array<{ id: string; name: string }>;
   selectedCampaigns: string[];
-  dateRange: DateRange | undefined;
   onCampaignChange: (campaignIds: string[]) => void;
-  onDateRangeChange: (dateRange: DateRange | undefined) => void;
   onClearFilters: () => void;
 }
 
 export function DashboardFilters({
   campaigns,
   selectedCampaigns,
-  dateRange,
   onCampaignChange,
-  onDateRangeChange,
   onClearFilters,
 }: DashboardFiltersProps) {
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isCampaignDropdownOpen, setIsCampaignDropdownOpen] = useState(false);
   const [campaignSearchQuery, setCampaignSearchQuery] = useState("");
-  const [startTime, setStartTime] = useState("00:00");
-  const [endTime, setEndTime] = useState("23:59");
 
   const filteredCampaigns = campaigns.filter(campaign =>
     campaign.name.toLowerCase().includes(campaignSearchQuery.toLowerCase())
@@ -72,24 +61,6 @@ export function DashboardFilters({
     return `${selectedCampaigns.length} campaigns selected`;
   };
 
-  const handleDateTimeChange = (range: DateRange | undefined) => {
-    if (range?.from && range?.to) {
-      // Apply time to the dates
-      const fromDateTime = new Date(range.from);
-      const toDateTime = new Date(range.to);
-      
-      const [fromHours, fromMinutes] = startTime.split(':').map(Number);
-      const [toHours, toMinutes] = endTime.split(':').map(Number);
-      
-      fromDateTime.setHours(fromHours, fromMinutes, 0, 0);
-      toDateTime.setHours(toHours, toMinutes, 59, 999);
-      
-      onDateRangeChange({ from: fromDateTime, to: toDateTime });
-    } else {
-      onDateRangeChange(range);
-    }
-  };
-
   return (
     <Card className="shadow-soft border-card-border">
       <CardContent className="p-4">
@@ -110,7 +81,7 @@ export function DashboardFilters({
                   <span className="truncate">{getSelectedCampaignText()}</span>
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-64 p-0 bg-background border-border" align="start">
+              <PopoverContent className="w-64 p-0 bg-background border-border z-50" align="start">
                 <div className="p-2 border-b border-border">
                   <div className="relative">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -131,10 +102,12 @@ export function DashboardFilters({
                     />
                     <span className="text-sm font-medium">All Campaigns</span>
                   </div>
-                  {filteredCampaigns.map((campaign) => (
+                  {campaigns.map((campaign) => (
                     <div
                       key={campaign.id}
-                      className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded cursor-pointer"
+                      className={`flex items-center space-x-2 p-2 hover:bg-muted/50 rounded cursor-pointer ${
+                        campaignSearchQuery === '' || filteredCampaigns.includes(campaign) ? '' : 'hidden'
+                      }`}
                       onClick={() => handleCampaignToggle(campaign.id)}
                     >
                       <Checkbox 
@@ -144,70 +117,11 @@ export function DashboardFilters({
                       <span className="text-sm truncate">{campaign.name}</span>
                     </div>
                   ))}
-                </div>
-              </PopoverContent>
-            </Popover>
-
-            {/* Date & Time Range Picker */}
-            <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full sm:w-72 justify-start text-left font-normal text-sm h-9"
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange?.from ? (
-                    dateRange.to ? (
-                      <span className="truncate">
-                        {format(dateRange.from, "MMM dd, HH:mm")} - {format(dateRange.to, "MMM dd, HH:mm")}
-                      </span>
-                    ) : (
-                      format(dateRange.from, "MMM dd, y")
-                    )
-                  ) : (
-                    <span>Select date & time range</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-background border-border" align="start">
-                <div className="p-4">
-                  <Calendar
-                    initialFocus
-                    mode="range"
-                    defaultMonth={dateRange?.from}
-                    selected={dateRange}
-                    onSelect={handleDateTimeChange}
-                    numberOfMonths={1}
-                    className={cn("pointer-events-auto")}
-                  />
-                  <div className="border-t border-border pt-4 mt-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Start Time</label>
-                        <div className="relative">
-                          <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            type="time"
-                            value={startTime}
-                            onChange={(e) => setStartTime(e.target.value)}
-                            className="pl-8 h-8 text-sm bg-background"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground mb-1 block">End Time</label>
-                        <div className="relative">
-                          <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            type="time"
-                            value={endTime}
-                            onChange={(e) => setEndTime(e.target.value)}
-                            className="pl-8 h-8 text-sm bg-background"
-                          />
-                        </div>
-                      </div>
+                  {filteredCampaigns.length === 0 && campaignSearchQuery !== '' && (
+                    <div className="p-2 text-sm text-muted-foreground text-center">
+                      No campaigns found
                     </div>
-                  </div>
+                  )}
                 </div>
               </PopoverContent>
             </Popover>

@@ -113,24 +113,14 @@ export function CampaignDetails({
     <div className="space-y-6">
       <Card className="shadow-soft border-card-border">
         <CardHeader>
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              onClick={onBack}
-              className="gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Campaigns
-            </Button>
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Phone className="h-5 w-5" />
-                {campaignName} - Call Details
-              </CardTitle>
-              <p className="text-muted-foreground mt-1">
-                {conversations.length} total calls
-              </p>
-            </div>
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Phone className="h-5 w-5" />
+              Call Details
+            </CardTitle>
+            <p className="text-muted-foreground mt-1">
+              {conversations.length} total calls
+            </p>
           </div>
         </CardHeader>
         <CardContent>
