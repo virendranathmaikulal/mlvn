@@ -22,10 +22,21 @@ serve(async (req) => {
       throw new Error('ElevenLabs API key not configured');
     }
 
-    // Create Supabase client
+    // Create Supabase client with ANONYMOUS key for regular access
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Create Supabase client with SERVICE_ROLE key for bypassing RLS
+    const serviceRoleSupabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      {
+        auth: {
+          persistSession: false,
+        },
+      }
+    );
 
     console.log('Launching campaign with data:', {
       call_name: callName,
@@ -59,8 +70,8 @@ serve(async (req) => {
     const result = await response.json();
     console.log('Campaign launched successfully:', result);
 
-    // Update campaign status in database
-    const { error: updateError } = await supabase
+    // Update campaign status in database using the SERVICE_ROLE client
+    const { error: updateError } = await serviceRoleSupabase
       .from('campaigns')
       .update({
         status: 'Launched',
@@ -73,9 +84,9 @@ serve(async (req) => {
     }
 
     // Save batch call data if available
-    if (result.batch_id || result.id) {
-      // Get user_id first
-      const { data: campaignData, error: campaignError } = await supabase
+    if (result.id) {
+      // Get user_id first using the ANONYMOUS key client
+      const { data: campaignData, error: campaignError } = await serviceRoleSupabase
         .from('campaigns')
         .select('user_id')
         .eq('id', campaignId)
@@ -84,23 +95,27 @@ serve(async (req) => {
       if (campaignError) {
         console.error('Error fetching campaign data:', campaignError);
       } else {
-        const batchIdToUse = result.batch_id || result.id;
+        const batchIdToUse = result.id; // API returns 'id' field as batch_id
         console.log('Saving batch call data with batch_id:', batchIdToUse);
-        
-        const { error: batchError } = await supabase
+        console.log('Full API response:', JSON.stringify(result));
+
+        // Use the SERVICE_ROLE client to insert data as it's a serverless function
+        const { error: batchError } = await serviceRoleSupabase
           .from('batch_calls')
           .insert({
-            user_id: campaignData.user_id,
-            campaign_id: campaignId,
-            batch_id: batchIdToUse,
-            batch_name: callName,
-            agent_id: agentId,
-            phone_number_id: phoneNumberId,
-            scheduled_time_unix: scheduledTimeUnix,
-            created_at_unix: Math.floor(Date.now() / 1000),
-            total_calls_scheduled: recipients.length,
-            status: 'pending'
-          });
+                     user_id: campaignData.user_id,
+                     campaign_id: campaignId,
+                     batch_id: batchIdToUse, // API 'id' maps to our 'batch_id'
+                     batch_name: result.name, // API 'name' maps to our 'batch_name'
+                     agent_id: result.agent_id,
+                     phone_number_id: result.phone_number_id,
+                     status: result.status,
+                     total_calls_scheduled: result.total_calls_scheduled,
+                     total_calls_dispatched: result.total_calls_dispatched,
+                     scheduled_time_unix: result.scheduled_time_unix,
+                     created_at_unix: result.created_at_unix,
+                     last_updated_at_unix: result.last_updated_at_unix,
+                });
 
         if (batchError) {
           console.error('Error saving batch call data:', batchError);

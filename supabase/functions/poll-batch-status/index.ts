@@ -77,24 +77,45 @@ serve(async (req) => {
         // Save recipients data if available
         if (batchData.recipients && Array.isArray(batchData.recipients)) {
           console.log(`Processing ${batchData.recipients.length} recipients`);
-          
+
           for (const recipient of batchData.recipients) {
             // Check if recipient already exists
             const { data: existingRecipient } = await supabase
               .from('recipients')
               .select('id')
-              .eq('elevenlabs_recipient_id', recipient.recipient_id)
+              .eq('elevenlabs_recipient_id', recipient.id)
               .eq('elevenlabs_batch_id', batchId)
               .maybeSingle();
 
             if (!existingRecipient) {
-              // Insert new recipient
+              // Check if conversation ID is available
+              if (recipient.conversation_id) {
+                // FIX: Replaced insert().onConflict().ignore() with upsert()
+                // The upsert method correctly handles the logic of inserting if the record doesn't exist
+                // or doing nothing if it does, preventing the foreign key violation.
+                console.log(`Creating placeholder conversation record for ID: ${recipient.conversation_id}`);
+                const { error: conversationUpsertError } = await supabase
+                  .from('conversations')
+                  .upsert({
+                    conversation_id: recipient.conversation_id,
+                    status: recipient.status,
+                    user_id: userId,
+                  }, { onConflict: 'conversation_id' }); // Use the `onConflict` option for upsert
+
+                if (conversationUpsertError) {
+                  console.error('Error creating conversation placeholder:', conversationUpsertError);
+                  // Continue to the next recipient to avoid blocking the loop
+                  continue;
+                }
+              }
+
+              // Now insert the new recipient, including the conversation_id if available.
               const { error: recipientError } = await supabase
                 .from('recipients')
                 .insert({
                   user_id: userId,
                   elevenlabs_batch_id: batchId,
-                  elevenlabs_recipient_id: recipient.recipient_id,
+                  elevenlabs_recipient_id: recipient.id,
                   phone_number: recipient.phone_number,
                   contact_name: recipient.contact_name || null,
                   status: recipient.status || null,
@@ -105,7 +126,7 @@ serve(async (req) => {
               if (recipientError) {
                 console.error('Error inserting recipient:', recipientError);
               } else {
-                console.log('Inserted new recipient:', recipient.recipient_id);
+                console.log('Inserted new recipient:', recipient.id);
               }
             } else {
               // Update existing recipient
@@ -116,13 +137,13 @@ serve(async (req) => {
                   elevenlabs_conversation_id: recipient.conversation_id || null,
                   conversation_initiation_client_data: recipient.conversation_initiation_client_data || null,
                 })
-                .eq('elevenlabs_recipient_id', recipient.recipient_id)
+                .eq('elevenlabs_recipient_id', recipient.id)
                 .eq('elevenlabs_batch_id', batchId);
 
               if (recipientUpdateError) {
                 console.error('Error updating recipient:', recipientUpdateError);
               } else {
-                console.log('Updated existing recipient:', recipient.recipient_id);
+                console.log('Updated existing recipient:', recipient.id);
               }
             }
           }
@@ -149,7 +170,7 @@ serve(async (req) => {
       } catch (pollError) {
         console.error('Error during polling iteration:', pollError);
         pollCount++;
-        
+
         // Continue polling on errors, but add delay
         if (pollCount < maxPolls) {
           await new Promise(resolve => setTimeout(resolve, pollInterval));
@@ -161,10 +182,10 @@ serve(async (req) => {
       console.warn('Max polling attempts reached');
     }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
+    return new Response(JSON.stringify({
+      success: true,
       completed: isCompleted,
-      pollCount 
+      pollCount
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

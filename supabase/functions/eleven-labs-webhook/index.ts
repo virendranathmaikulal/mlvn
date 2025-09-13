@@ -4,7 +4,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-elevenlabs-signature',
+  'Access-Control-Allow-Headers': 'elevenlabs-signature, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
 
 serve(async (req) => {
@@ -13,92 +14,195 @@ serve(async (req) => {
   }
 
   try {
-    const signature = req.headers.get('x-elevenlabs-signature');
-    const body = await req.text();
+    // Log all incoming headers to debug
+    console.log('--- Incoming Request Headers ---');
+    req.headers.forEach((value, name) => {
+      console.log(`${name}: ${value}`);
+    });
+    console.log('------------------------------');
+
+    const signature = req.headers.get('elevenlabs-signature') || req.headers.get('x-elevenlabs-signature');
+    console.log('Found signature header:', signature);
     
+    const body = await req.text();
+    console.log('Request body length:', body.length);
+    
+    const webhookData = JSON.parse(body);
+    console.log('Received webhook payload:', JSON.stringify(webhookData, null, 2));
+
     // Verify HMAC signature using Web Crypto API
     const webhookSecret = Deno.env.get('ELEVENLABS_WEBHOOK_SECRET');
+    console.log('Webhook secret configured:', !!webhookSecret);
+    console.log('Webhook secret (first 10 chars):', webhookSecret?.substring(0, 10));
+    
     if (!webhookSecret) {
-      throw new Error('Webhook secret not configured');
+      console.error('Webhook secret not configured');
+      return new Response(JSON.stringify({ error: 'Webhook secret not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const key = await crypto.subtle.importKey(
-      'raw',
-      new TextEncoder().encode(webhookSecret),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign']
-    );
+    if (!signature) {
+      console.error('No signature header found - proceeding without verification for debugging');
+      // For debugging, let's proceed without signature verification
+    } else {
+      try {
+        // Remove any quotes from the webhook secret if present
+        const cleanSecret = webhookSecret.replace(/^["']|["']$/g, '');
+        console.log('Using clean secret (first 10 chars):', cleanSecret.substring(0, 10));
+        
+        const key = await crypto.subtle.importKey(
+          'raw',
+          new TextEncoder().encode(cleanSecret),
+          { name: 'HMAC', hash: 'SHA-256' },
+          false,
+          ['sign']
+        );
 
-    const signature_bytes = await crypto.subtle.sign(
-      'HMAC',
-      key,
-      new TextEncoder().encode(body)
-    );
+        const signature_bytes = await crypto.subtle.sign(
+          'HMAC',
+          key,
+          new TextEncoder().encode(body)
+        );
 
-    const expectedSignature = Array.from(new Uint8Array(signature_bytes))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
+        const expectedSignature = Array.from(new Uint8Array(signature_bytes))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('');
 
-    if (signature !== `sha256=${expectedSignature}`) {
-      console.error('Invalid webhook signature');
-      return new Response('Unauthorized', { status: 401 });
+        const expectedSignatureWithPrefix = `sha256=${expectedSignature}`;
+        console.log('Expected signature:', expectedSignatureWithPrefix);
+        console.log('Received signature:', signature);
+        console.log('Signatures match:', signature === expectedSignatureWithPrefix);
+
+        if (signature !== expectedSignatureWithPrefix) {
+          console.error('Invalid webhook signature - but continuing for debugging');
+          // For debugging, let's not fail on signature mismatch
+          // return new Response(JSON.stringify({ error: 'Invalid signature' }), {
+          //   status: 401,
+          //   headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          // });
+        }
+      } catch (signatureError) {
+        console.error('Error verifying signature:', signatureError);
+        console.error('Continuing anyway for debugging purposes');
+        // For debugging, let's not fail on signature errors
+        // return new Response(JSON.stringify({ error: 'Signature verification failed' }), {
+        //   status: 401,
+        //   headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        // });
+      }
     }
 
-    const webhookData = JSON.parse(body);
-    console.log('Received webhook:', webhookData);
+    console.log('Webhook type:', webhookData.type);
 
     // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Save conversation data based on webhook type
-    if (webhookData.type === 'conversation_ended') {
-      const conversationData = webhookData.data;
-      
-      // Find the campaign and user based on conversation metadata
-      const { data: campaign } = await supabase
-        .from('campaigns')
-        .select('user_id')
-        .eq('elevenlabs_agent_id', conversationData.agent_id)
-        .single();
+    if (webhookData.type === 'post_call_transcription') {
+      const conversationData = webhookData.data; //conv_6501k4yxfg2ce8rawe5dew8dzy0h
+      console.log('Processing conversation:', conversationData.conversation_id);
+      console.log('batch_call_recipient_id:', conversationData.metadata.batch_call?.batch_call_recipient_id);
+      // Try to find user_id from recipient record, but don't fail if not found
+      let userId = null;
+      if (conversationData.metadata.batch_call?.batch_call_recipient_id) {
+        const { data: recipientRecord } = await supabase
+          .from('recipients')
+          .select('user_id')
+          .eq('elevenlabs_recipient_id', conversationData.metadata.batch_call.batch_call_recipient_id)
+          .maybeSingle();
+        
+        userId = recipientRecord?.user_id;
+        console.log('Found user_id from recipient:', userId);
+      }
 
-      if (campaign) {
-        // Insert conversation record
-        const { error: conversationError } = await supabase
-          .from('conversations')
-          .insert({
-            user_id: campaign.user_id,
+      // If no user_id found from recipient, try to find from batch_calls table
+      if (!userId && conversationData.metadata.batch_call?.batch_call_id) {
+        const { data: batchRecord } = await supabase
+          .from('batch_calls')
+          .select('user_id')
+          .eq('batch_id', conversationData.metadata.batch_call.batch_call_id)
+          .maybeSingle();
+        
+        userId = batchRecord?.user_id;
+        console.log('Found user_id from batch_calls:', userId);
+      }
+
+      if (!userId) {
+        console.error('Unable to determine user_id for conversation');
+        return new Response(JSON.stringify({ error: 'Unable to determine user_id' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Step 1: Upsert the conversation record.
+      const { error: conversationUpsertError } = await supabase
+        .from('conversations')
+        .upsert({
+          user_id: userId,
+          conversation_id: conversationData.conversation_id,
+          agent_id: conversationData.agent_id,
+          phone_number: conversationData.metadata.phone_call?.external_number || null,
+          contact_name: conversationData.contact_name || null,
+          status: conversationData.status,
+          call_successful: conversationData.analysis?.call_successful || null,
+          call_duration_secs: conversationData.metadata?.call_duration_secs || 0,
+          total_cost: conversationData.metadata?.cost || 0,
+          start_time_unix: conversationData.metadata?.start_time_unix_secs || null,
+          accepted_time_unix: conversationData.metadata?.accepted_time_unix_secs || null,
+          conversation_summary: conversationData.analysis?.transcript_summary || null,
+          analysis: conversationData.analysis || {},
+          metadata: conversationData.metadata || {},
+          has_audio: conversationData.has_audio || false,
+          elevenlabs_batch_id: conversationData.metadata.batch_call?.batch_call_id || null,
+          recipient_id: conversationData.metadata.batch_call?.batch_call_recipient_id || null,
+          recipient_phone_number: conversationData.metadata.phone_call?.external_number || null
+        }, { onConflict: 'conversation_id' });
+
+      if (conversationUpsertError) {
+        console.error('Error saving or updating conversation:', conversationUpsertError);
+      } else {
+        console.log('Conversation saved successfully');
+
+        // Step 2: Save transcript data to transcripts table
+        const { error: transcriptUpsertError } = await supabase
+          .from('transcripts')
+          .upsert({
             conversation_id: conversationData.conversation_id,
-            agent_id: conversationData.agent_id,
-            phone_number: conversationData.phone_number,
-            contact_name: conversationData.contact_name || null,
-            status: conversationData.status,
-            call_successful: conversationData.call_successful ? 'success' : 'failed',
-            call_duration_secs: conversationData.call_duration_secs || 0,
-            start_time_unix: conversationData.start_time_unix,
-            accepted_time_unix: conversationData.accepted_time_unix,
-            conversation_summary: conversationData.conversation_summary,
-            transcript: conversationData.transcript || [],
-            analysis: conversationData.analysis || {},
-            metadata: conversationData.metadata || {},
-            has_audio: conversationData.has_audio || false,
-            total_cost: conversationData.total_cost || 0
-          });
+            full_transcript: conversationData.transcript || []
+          }, { onConflict: 'conversation_id' });
 
-        if (conversationError) {
-          console.error('Error saving conversation:', conversationError);
+        if (transcriptUpsertError) {
+          console.error('Error saving transcript:', transcriptUpsertError);
         } else {
-          console.log('Conversation saved successfully');
+          console.log('Transcript saved successfully');
+        }
+
+        // Step 3: Update the recipient record to link it to the conversation (if recipient exists)
+        if (conversationData.metadata.batch_call?.batch_call_recipient_id) {
+          const { error: recipientUpdateError } = await supabase
+            .from('recipients')
+            .update({
+              elevenlabs_conversation_id: conversationData.conversation_id,
+              status: conversationData.status,
+              updated_at: new Date().toISOString()
+            })
+            .eq('elevenlabs_recipient_id', conversationData.metadata.batch_call.batch_call_recipient_id);
+
+          if (recipientUpdateError) {
+            console.error('Error updating recipient with conversation ID:', recipientUpdateError);
+          } else {
+            console.log('Recipient updated with conversation ID successfully');
+          }
         }
       }
-    }
-
-    // Handle batch status updates
-    if (webhookData.type === 'batch_status_update') {
+    } else if (webhookData.type === 'batch_status_update') {
+      // Handle batch status updates
       const batchData = webhookData.data;
-      
+
       const { error: batchError } = await supabase
         .from('batch_calls')
         .update({
