@@ -53,12 +53,12 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div style={{ height: 'calc(100vh - 64px - 80px)' }} className="flex flex-col">
       {selectedCampaignDetails ? (
         // Campaign Details View
         <div className="h-full flex flex-col">
           {/* Breadcrumb/Navigation Header */}
-          <div className="flex items-center gap-4 mb-6 pb-4 border-b">
+          <div className="flex items-center gap-4 mb-6 pb-4 border-b flex-shrink-0">
             <Button
               variant="outline"
               onClick={handleBackToCampaigns}
@@ -84,70 +84,68 @@ export default function Dashboard() {
           </div>
         </div>
       ) : (
-        // Main Dashboard View
-        <div className="h-full overflow-auto">
-          <div className="space-y-6">
-            {/* Welcome Section */}
-            <div className="bg-gradient-brand rounded-xl p-6 text-white shadow-medium">
-              <h2 className="text-3xl font-bold mb-2">Welcome back, {getFirstName()}!</h2>
-              <p className="text-white/90 text-lg">
-                Create amazing voice experiences for your customers
-              </p>
-            </div>
-
-            {/* Main Action Buttons */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Button
-                onClick={() => navigate("/create-agent")}
-                className="h-32 bg-card border border-card-border hover:bg-muted/50 text-left p-6 shadow-soft transition-all hover:shadow-medium group"
-                variant="outline"
-              >
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                    <Mic className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-foreground mb-1">Create Voice Agent</h3>
-                    <p className="text-muted-foreground">Set up a new AI voice agent for your business needs</p>
-                  </div>
-                </div>
-              </Button>
-
-              <Button
-                onClick={() => navigate("/run-campaign")}
-                className="h-32 bg-card border border-card-border hover:bg-muted/50 text-left p-6 shadow-soft transition-all hover:shadow-medium group"
-                variant="outline"
-              >
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center group-hover:bg-secondary/20 transition-colors">
-                    <Phone className="h-6 w-6 text-secondary" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-foreground mb-1">Run Campaign</h3>
-                    <p className="text-muted-foreground">Launch inbound or outbound calling campaigns</p>
-                  </div>
-                </div>
-              </Button>
-            </div>
-
-            {/* Dashboard Filters */}
-            <DashboardFilters
-              campaigns={campaigns.map(c => ({ id: c.id, name: c.name }))}
-              selectedCampaigns={selectedCampaigns}
-              onCampaignChange={handleCampaignChange}
-              onClearFilters={handleClearFilters}
-            />
-
-            {/* Dashboard Metrics */}
-            <DashboardMetrics metrics={metrics} isLoading={isLoading} />
-
-            {/* Campaigns List */}
-            <CampaignsList
-              campaigns={campaigns}
-              onViewDetails={handleViewDetails}
-              isLoading={isLoading}
-            />
+        // Main Dashboard View - Allow normal scrolling
+        <div className="space-y-6">
+          {/* Welcome Section */}
+          <div className="bg-gradient-brand rounded-xl p-6 text-white shadow-medium">
+            <h2 className="text-3xl font-bold mb-2">Welcome back, {getFirstName()}!</h2>
+            <p className="text-white/90 text-lg">
+              Create amazing voice experiences for your customers
+            </p>
           </div>
+
+          {/* Main Action Buttons */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Button
+              onClick={() => navigate("/create-agent")}
+              className="h-32 bg-card border border-card-border hover:bg-muted/50 text-left p-6 shadow-soft transition-all hover:shadow-medium group"
+              variant="outline"
+            >
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <Mic className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-foreground mb-1">Create Voice Agent</h3>
+                  <p className="text-muted-foreground">Set up a new AI voice agent for your business needs</p>
+                </div>
+              </div>
+            </Button>
+
+            <Button
+              onClick={() => navigate("/run-campaign")}
+              className="h-32 bg-card border border-card-border hover:bg-muted/50 text-left p-6 shadow-soft transition-all hover:shadow-medium group"
+              variant="outline"
+            >
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center group-hover:bg-secondary/20 transition-colors">
+                  <Phone className="h-6 w-6 text-secondary" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-foreground mb-1">Run Campaign</h3>
+                  <p className="text-muted-foreground">Launch inbound or outbound calling campaigns</p>
+                </div>
+              </div>
+            </Button>
+          </div>
+
+          {/* Dashboard Filters */}
+          <DashboardFilters
+            campaigns={campaigns.map(c => ({ id: c.id, name: c.name }))}
+            selectedCampaigns={selectedCampaigns}
+            onCampaignChange={handleCampaignChange}
+            onClearFilters={handleClearFilters}
+          />
+
+          {/* Dashboard Metrics */}
+          <DashboardMetrics metrics={metrics} isLoading={isLoading} />
+
+          {/* Campaigns List */}
+          <CampaignsList
+            campaigns={campaigns}
+            onViewDetails={handleViewDetails}
+            isLoading={isLoading}
+          />
         </div>
       )}
     </div>
