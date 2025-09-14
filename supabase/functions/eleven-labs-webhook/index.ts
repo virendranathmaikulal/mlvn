@@ -138,6 +138,19 @@ serve(async (req) => {
         });
       }
 
+      // Extract dynamic variables from conversation initiation client data for contact name
+      const dynamicVariables = conversationData.conversation_initiation_client_data?.dynamic_variables || {};
+      const contactName = dynamicVariables.name || conversationData.contact_name || null;
+      
+      console.log('Dynamic variables:', JSON.stringify(dynamicVariables, null, 2));
+      console.log('Resolved contact name:', contactName);
+
+      // Enhanced metadata with dynamic variables
+      const enhancedMetadata = {
+        ...conversationData.metadata || {},
+        dynamic_variables: dynamicVariables
+      };
+
       // Step 1: Upsert the conversation record.
       const { error: conversationUpsertError } = await supabase
         .from('conversations')
@@ -146,7 +159,7 @@ serve(async (req) => {
           conversation_id: conversationData.conversation_id,
           agent_id: conversationData.agent_id,
           phone_number: conversationData.metadata.phone_call?.external_number || null,
-          contact_name: conversationData.contact_name || null,
+          contact_name: contactName,
           status: conversationData.status,
           call_successful: conversationData.analysis?.call_successful || null,
           call_duration_secs: conversationData.metadata?.call_duration_secs || 0,
@@ -155,7 +168,7 @@ serve(async (req) => {
           accepted_time_unix: conversationData.metadata?.accepted_time_unix_secs || null,
           conversation_summary: conversationData.analysis?.transcript_summary || null,
           analysis: conversationData.analysis || {},
-          metadata: conversationData.metadata || {},
+          metadata: enhancedMetadata,
           has_audio: conversationData.has_audio || false,
           elevenlabs_batch_id: conversationData.metadata.batch_call?.batch_call_id || null,
           recipient_id: conversationData.metadata.batch_call?.batch_call_recipient_id || null,
