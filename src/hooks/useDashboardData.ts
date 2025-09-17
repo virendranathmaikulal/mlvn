@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DateRange } from "react-day-picker";
+import { useProfile } from "@/hooks/useProfile";
 
 interface MetricsData {
   totalCalls: number;
@@ -38,6 +39,13 @@ interface ConversationDetail {
   conversation_id: string;
 }
 
+// Helper function to calculate minutes based on the new billing logic
+const calculateBillingMinutes = (durationSeconds: number): number => {
+  if (durationSeconds <= 0) return 0;
+  if (durationSeconds <= 60) return 1;
+  return Math.ceil(durationSeconds / 60);
+};
+
 export function useDashboardData() {
   const [metrics, setMetrics] = useState<MetricsData>({
     totalCalls: 0,
@@ -50,6 +58,7 @@ export function useDashboardData() {
   const [conversations, setConversations] = useState<ConversationDetail[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { profile } = useProfile();
 
   const fetchDashboardData = async (selectedCampaigns?: string[]) => {
     try {
@@ -111,8 +120,15 @@ export function useDashboardData() {
       const totalCalls = conversationsData?.length || 0;
       const connectedCalls = conversationsData?.filter(c => c.call_successful === 'success').length || 0;
       const successRate = totalCalls > 0 ? (connectedCalls / totalCalls) * 100 : 0;
-      const totalMinutes = conversationsData?.reduce((sum, c) => sum + (c.call_duration_secs / 60), 0) || 0;
-      const totalCost = conversationsData?.reduce((sum, c) => sum + (c.total_cost || 0), 0) || 0;
+      
+      // Calculate total minutes using new billing logic
+      const totalMinutes = conversationsData?.reduce((sum, c) => {
+        return sum + calculateBillingMinutes(c.call_duration_secs || 0);
+      }, 0) || 0;
+      
+      // Calculate total cost based on user's currency and call rate from profile
+      const callRate = profile?.call_rate || 0;
+      const totalCost = totalMinutes * callRate;
 
       setMetrics({
         totalCalls,
@@ -128,8 +144,15 @@ export function useDashboardData() {
         
         const campaignConnected = campaignCalls.filter((c: any) => c.call_successful === 'success').length;
         const campaignSuccessRate = campaignCalls.length > 0 ? (campaignConnected / campaignCalls.length) * 100 : 0;
-        const campaignMinutes = campaignCalls.reduce((sum: number, c: any) => sum + (c.call_duration_secs / 60), 0);
-        const campaignCost = campaignCalls.reduce((sum: number, c: any) => sum + (c.total_cost || 0), 0);
+        
+        // Calculate total minutes using new billing logic: <=60sec = 1min, >60&<=120 = 2min, etc.
+        const campaignMinutes = campaignCalls.reduce((sum: number, c: any) => {
+          return sum + calculateBillingMinutes(c.call_duration_secs || 0);
+        }, 0);
+        
+        // Calculate total cost based on user's currency and call rate from profile
+        const callRate = profile?.call_rate || 0;
+        const campaignCost = campaignMinutes * callRate;
 
         return {
           id: campaign.id,

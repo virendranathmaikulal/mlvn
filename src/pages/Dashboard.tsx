@@ -143,13 +143,14 @@ export default function Dashboard() {
           />
 
           {/* Dashboard Metrics */}
-          <DashboardMetrics metrics={metrics} isLoading={isLoading} />
+          <DashboardMetrics metrics={metrics} isLoading={isLoading} userCurrency={profile?.currency || 'INR'} />
 
           {/* Campaigns List */}
           <CampaignsList
             campaigns={campaigns}
             onViewDetails={handleViewDetails}
             isLoading={isLoading}
+            userCurrency={profile?.currency || 'INR'}
           />
         </div>
       )}
