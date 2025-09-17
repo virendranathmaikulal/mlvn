@@ -374,19 +374,17 @@ export function CampaignDetails({
                           variant="outline"
                           size="sm"
                           onClick={() => playAudio(conversation.conversation_id)}
-                          className="gap-1"
+                          title="Play recording"
                         >
                           <Volume2 className="h-4 w-4" />
-                          Play
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => downloadCallRecording(conversation.conversation_id)}
-                          className="gap-1"
+                          title="Download recording"
                         >
                           <Download className="h-4 w-4" />
-                          Download
                         </Button>
                       </div>
                     </TableCell>
