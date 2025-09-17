@@ -145,7 +145,21 @@ export function useDashboardData() {
         };
       }) || [];
 
-      setCampaigns(processedCampaigns);
+      // Sort campaigns by Campaign Start date (launched_at) in descending order
+      // Latest campaigns appear first. If launched_at is null, use created_at as fallback
+      const sortedCampaigns = processedCampaigns.sort((a, b) => {
+        const dateA = a.launched_at || a.created_at;
+        const dateB = b.launched_at || b.created_at;
+        
+        // Convert to Date objects for comparison
+        const timeA = new Date(dateA).getTime();
+        const timeB = new Date(dateB).getTime();
+        
+        // Descending order (latest first)
+        return timeB - timeA;
+      });
+
+      setCampaigns(sortedCampaigns);
       setConversations((conversationsData || []).map(conv => ({
         ...conv,
         analysis: conv.analysis || {},

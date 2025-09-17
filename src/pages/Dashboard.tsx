@@ -131,7 +131,12 @@ export default function Dashboard() {
 
           {/* Dashboard Filters */}
           <DashboardFilters
-            campaigns={campaigns.map(c => ({ id: c.id, name: c.name }))}
+            campaigns={campaigns.map(c => ({ 
+              id: c.id, 
+              name: c.name, 
+              launched_at: c.launched_at,
+              created_at: c.created_at 
+            }))}
             selectedCampaigns={selectedCampaigns}
             onCampaignChange={handleCampaignChange}
             onClearFilters={handleClearFilters}
