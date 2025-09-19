@@ -47,30 +47,52 @@ serve(async (req) => {
       contactsWithFields: contactsWithFields
     });
 
+    // Log each contact's structure for debugging
+    if (contactsWithFields && contactsWithFields.length > 0) {
+      console.log('Sample contact structure:', JSON.stringify(contactsWithFields[0], null, 2));
+      console.log('Total contacts with fields:', contactsWithFields.length);
+    }
+
     // Prepare ElevenLabs API payload according to the official documentation
     const elevenlabsPayload: any = {
       call_name: callName, // Use call_name as per API spec
       agent_id: agentId,
       agent_phone_number_id: phoneNumberId, // Use agent_phone_number_id as per API spec
       recipients: contactsWithFields ? contactsWithFields.map((contact: any) => {
-        // Extract dynamic variables from contact's additional_fields
+        // Extract dynamic variables from all contact fields
         const dynamicVariables: any = {};
         
-        // Add name if available (exclude phone_number from dynamic variables)
-        if (contact.name) {
-          dynamicVariables.user_name = contact.name; // Use descriptive key
+        // Add name if available
+        if (contact.name && contact.name.trim() !== '') {
+          dynamicVariables.user_name = contact.name.trim();
         }
         
-        // Add all fields from additional_fields if available
-        // Any field other than phone_number should be a dynamic variable
+        // Process all fields from the contact object (these come from frontend spread)
+        Object.keys(contact).forEach(key => {
+          // Skip phone, id and other system fields - include everything else as dynamic variables
+          if (!['id', 'phone', 'phone_number', 'user_id', 'created_at', 'updated_at'].includes(key) && 
+              contact[key] !== null && 
+              contact[key] !== undefined && 
+              contact[key] !== '') {
+            // If it's the name field, use user_name key for clarity
+            const dynamicKey = key === 'name' ? 'user_name' : key;
+            dynamicVariables[dynamicKey] = typeof contact[key] === 'string' ? contact[key].trim() : contact[key];
+          }
+        });
+        
+        // ALSO extract from additional_fields JSON if it exists (from database)
         if (contact.additional_fields && typeof contact.additional_fields === 'object') {
           Object.keys(contact.additional_fields).forEach(key => {
-            // Skip phone number and empty values
-            if (key !== 'phone_number' && key !== 'phone' && 
+            // Skip phone-related fields and empty values
+            if (!['phone_number', 'phone', 'id'].includes(key) && 
                 contact.additional_fields[key] !== null && 
                 contact.additional_fields[key] !== undefined && 
                 contact.additional_fields[key] !== '') {
-              dynamicVariables[key] = contact.additional_fields[key];
+              // Avoid overwriting if already set from direct contact fields
+              if (!dynamicVariables.hasOwnProperty(key)) {
+                dynamicVariables[key] = typeof contact.additional_fields[key] === 'string' ? 
+                  contact.additional_fields[key].trim() : contact.additional_fields[key];
+              }
             }
           });
         }
@@ -83,6 +105,10 @@ serve(async (req) => {
         // Add dynamic_variables directly (not wrapped in conversation_initiation_client_data)
         if (Object.keys(dynamicVariables).length > 0) {
           recipient.dynamic_variables = dynamicVariables;
+          // Log extracted dynamic variables for debugging
+          console.log(`Dynamic variables for ${contact.phone}:`, JSON.stringify(dynamicVariables, null, 2));
+        } else {
+          console.log(`No dynamic variables found for ${contact.phone}`);
         }
         
         return recipient;
