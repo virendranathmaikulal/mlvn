@@ -47,44 +47,52 @@ serve(async (req) => {
       contactsWithFields: contactsWithFields
     });
 
-    // Prepare ElevenLabs API payload
-    const elevenlabsPayload = {
-      call_name: callName,
+    // Prepare ElevenLabs API payload according to the official documentation
+    const elevenlabsPayload: any = {
+      call_name: callName, // Use call_name as per API spec
       agent_id: agentId,
-      agent_phone_number_id: phoneNumberId,
-      scheduled_time_unix: scheduledTimeUnix,
+      agent_phone_number_id: phoneNumberId, // Use agent_phone_number_id as per API spec
       recipients: contactsWithFields ? contactsWithFields.map((contact: any) => {
         // Extract dynamic variables from contact's additional_fields
         const dynamicVariables: any = {};
         
-        // Add name if available
+        // Add name if available (exclude phone_number from dynamic variables)
         if (contact.name) {
-          dynamicVariables.name = contact.name;
+          dynamicVariables.user_name = contact.name; // Use descriptive key
         }
         
         // Add all fields from additional_fields if available
+        // Any field other than phone_number should be a dynamic variable
         if (contact.additional_fields && typeof contact.additional_fields === 'object') {
           Object.keys(contact.additional_fields).forEach(key => {
-            if (contact.additional_fields[key] !== null && contact.additional_fields[key] !== undefined && contact.additional_fields[key] !== '') {
+            // Skip phone number and empty values
+            if (key !== 'phone_number' && key !== 'phone' && 
+                contact.additional_fields[key] !== null && 
+                contact.additional_fields[key] !== undefined && 
+                contact.additional_fields[key] !== '') {
               dynamicVariables[key] = contact.additional_fields[key];
             }
           });
         }
         
-        // Only include conversation_initiation_client_data if there are dynamic variables
+        // Build recipient according to correct API structure
         const recipient: any = {
           phone_number: contact.phone
         };
         
+        // Add dynamic_variables directly (not wrapped in conversation_initiation_client_data)
         if (Object.keys(dynamicVariables).length > 0) {
-          recipient.conversation_initiation_client_data = {
-            dynamic_variables: dynamicVariables
-          };
+          recipient.dynamic_variables = dynamicVariables;
         }
         
         return recipient;
       }) : recipients.map((phone: string) => ({ phone_number: phone }))
     };
+
+    // Add scheduled_time_unix if provided (use Unix timestamp format)
+    if (scheduledTimeUnix && scheduledTimeUnix > 0) {
+      elevenlabsPayload.scheduled_time_unix = scheduledTimeUnix;
+    }
 
     // Log the exact payload being sent to ElevenLabs
     console.log('ElevenLabs API payload:', JSON.stringify(elevenlabsPayload, null, 2));
