@@ -39,19 +39,19 @@ serve(async (req) => {
     );
 
     console.log('Launching campaign with data:', {
-      batch_name: callName,
+      call_name: callName,
       agent_id: agentId,
-      phone_number_id: phoneNumberId,
-      scheduled_time: scheduledTimeUnix ? new Date(scheduledTimeUnix * 1000).toISOString() : null,
+      agent_phone_number_id: phoneNumberId,
+      scheduled_time_unix: scheduledTimeUnix,
       recipients: recipients,
       contactsWithFields: contactsWithFields
     });
 
     // Prepare ElevenLabs API payload according to the official documentation
     const elevenlabsPayload: any = {
-      batch_name: callName, // Use batch_name as per API spec
+      call_name: callName, // Use call_name as per API spec
       agent_id: agentId,
-      phone_number_id: phoneNumberId, // Remove 'agent_' prefix as per API spec
+      agent_phone_number_id: phoneNumberId, // Use agent_phone_number_id as per API spec
       recipients: contactsWithFields ? contactsWithFields.map((contact: any) => {
         // Extract dynamic variables from contact's additional_fields
         const dynamicVariables: any = {};
@@ -89,9 +89,9 @@ serve(async (req) => {
       }) : recipients.map((phone: string) => ({ phone_number: phone }))
     };
 
-    // Add scheduled_time in ISO format if provided (convert from Unix timestamp)
+    // Add scheduled_time_unix if provided (use Unix timestamp format)
     if (scheduledTimeUnix && scheduledTimeUnix > 0) {
-      elevenlabsPayload.scheduled_time = new Date(scheduledTimeUnix * 1000).toISOString();
+      elevenlabsPayload.scheduled_time_unix = scheduledTimeUnix;
     }
 
     // Log the exact payload being sent to ElevenLabs
