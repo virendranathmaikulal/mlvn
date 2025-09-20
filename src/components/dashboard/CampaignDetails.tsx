@@ -23,6 +23,7 @@ interface ConversationDetail {
   id: string;
   phone_number: string;
   contact_name?: string;
+  status: string; // Conversation status (completed, failed, in_progress, etc.)
   call_successful: string;
   call_duration_secs: number;
   start_time_unix: number;
@@ -163,7 +164,7 @@ export function CampaignDetails({
       return {
         'Phone Number': conversation.phone_number || 'N/A',
         'Name': conversation.dynamic_variables?.name || conversation.dynamic_variables?.user_name || conversation.additional_fields?.name || 'N/A',
-        'Call Status': conversation.call_successful || 'Unknown',
+        'Call Status': conversation.status || 'Unknown',
         'Date': formatDateOnly(conversation.start_time_unix),
         'Start Time': formatTimeOnly(conversation.start_time_unix),
         'Duration': formatDuration(conversation.call_duration_secs),
@@ -396,7 +397,7 @@ export function CampaignDetails({
                       )}
                     </TableCell>
                     <TableCell>
-                      {getCallStatusBadge(conversation.call_successful)}
+                      {getCallStatusBadge(conversation.status)}
                     </TableCell>
                     <TableCell>
                       {formatDateOnly(conversation.start_time_unix)}

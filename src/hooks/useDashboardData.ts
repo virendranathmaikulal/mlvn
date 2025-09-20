@@ -29,6 +29,7 @@ interface ConversationDetail {
   id: string;
   phone_number: string;
   contact_name: string;
+  status: string; // Conversation status (completed, failed, in_progress, etc.)
   call_successful: string;
   call_duration_secs: number;
   start_time_unix: number;
