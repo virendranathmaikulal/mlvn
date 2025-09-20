@@ -128,13 +128,13 @@ export function CampaignDetails({
   };
 
   const getCallStatusBadge = (status: string) => {
-    // Map ElevenLabs webhook status values
+    // Map call outcome status values (different from evaluation results)
     const statusMap: { [key: string]: { variant: any; label: string; className?: string } } = {
-      'completed': { variant: 'default', label: 'Completed', className: 'bg-success text-success-foreground' },
+      'completed': { variant: 'default', label: 'Completed', className: 'bg-blue-100 text-blue-800' },
       'failed': { variant: 'destructive', label: 'Failed' },
       'in_progress': { variant: 'secondary', label: 'In Progress' },
       'queued': { variant: 'secondary', label: 'Queued' },
-      'success': { variant: 'default', label: 'Success', className: 'bg-success text-success-foreground' },
+      'success': { variant: 'default', label: 'Connected', className: 'bg-green-100 text-green-800' },
       'no_answer': { variant: 'destructive', label: 'No Answer' },
       'busy': { variant: 'destructive', label: 'Busy' },
       'voicemail': { variant: 'secondary', label: 'Voicemail' }
@@ -164,7 +164,7 @@ export function CampaignDetails({
       return {
         'Phone Number': conversation.phone_number || 'N/A',
         'Name': conversation.dynamic_variables?.name || conversation.dynamic_variables?.user_name || conversation.additional_fields?.name || 'N/A',
-        'Call Status': conversation.status || 'Unknown',
+        'Call Status': conversation.call_successful || 'Unknown',
         'Date': formatDateOnly(conversation.start_time_unix),
         'Start Time': formatTimeOnly(conversation.start_time_unix),
         'Duration': formatDuration(conversation.call_duration_secs),
@@ -397,7 +397,8 @@ export function CampaignDetails({
                       )}
                     </TableCell>
                     <TableCell>
-                      {getCallStatusBadge(conversation.status)}
+                      {/* Call Status should show call outcome (success, no_answer, busy, etc.) */}
+                      {getCallStatusBadge(conversation.call_successful)}
                     </TableCell>
                     <TableCell>
                       {formatDateOnly(conversation.start_time_unix)}
@@ -437,16 +438,19 @@ export function CampaignDetails({
                       </div>
                     </TableCell>
                     <TableCell>
+                      {/* Evaluation shows agent evaluation criteria results */}
                       {conversation.analysis?.evaluation_criteria_results ? (
                         <div className="space-y-1">
                           {Object.entries(conversation.analysis.evaluation_criteria_results).map(([key, result]: [string, any]) => (
-                            <Badge
-                              key={key}
-                              variant={result.result === 'success' ? 'default' : 'destructive'}
-                              className={result.result === 'success' ? 'bg-success text-success-foreground' : ''}
-                            >
-                              {result.result}
-                            </Badge>
+                            <div key={key} className="flex flex-col gap-1">
+                              <div className="text-xs text-muted-foreground">{key}</div>
+                              <Badge
+                                variant={result.result === 'success' ? 'default' : 'destructive'}
+                                className={result.result === 'success' ? 'bg-success text-success-foreground' : ''}
+                              >
+                                {result.result}
+                              </Badge>
+                            </div>
                           ))}
                         </div>
                       ) : (
