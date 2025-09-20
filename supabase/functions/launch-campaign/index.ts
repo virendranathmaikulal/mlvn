@@ -102,9 +102,11 @@ serve(async (req) => {
           phone_number: contact.phone
         };
         
-        // Add dynamic_variables directly (not wrapped in conversation_initiation_client_data)
+        // Add dynamic_variables wrapped in conversation_initiation_client_data as per API spec
         if (Object.keys(dynamicVariables).length > 0) {
-          recipient.dynamic_variables = dynamicVariables;
+          recipient.conversation_initiation_client_data = {
+            dynamic_variables: dynamicVariables
+          };
           // Log extracted dynamic variables for debugging
           console.log(`Dynamic variables for ${contact.phone}:`, JSON.stringify(dynamicVariables, null, 2));
         } else {
