@@ -33,7 +33,6 @@ interface Agent {
 
 interface Contact {
   id: string;
-  name: string;
   phone: string;
   [key: string]: string;
 }
@@ -215,7 +214,7 @@ export default function RunCampaign() {
     const parsedContacts: Contact[] = [];
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(',').map(v => v.trim());
-      if (values.length >= 2 && values[0] && values[1]) {
+      if (values.length >= 0 && values[0]) {
         const contact: Contact = {
           id: `csv-${i}`,
           phone: values[0],
