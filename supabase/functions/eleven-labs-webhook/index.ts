@@ -161,26 +161,70 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     if (webhookData.type === 'post_call_transcription') {
-      const conversationData = webhookData.data; //conv_6501k4yxfg2ce8rawe5dew8dzy0h
-      console.log('Processing conversation:', conversationData.conversation_id);
-      console.log('batch_call_recipient_id:', conversationData.metadata.batch_call?.batch_call_recipient_id);
-      // Try to find user_id from recipient record, but don't fail if not found
-      let userId = null;
-      let campaignId = null;
+       const conversationData = webhookData.data; //conv_6501k4yxfg2ce8rawe5dew8dzy0h
+       console.log('Processing conversation:', conversationData.conversation_id);
+       console.log('batch_call_recipient_id:', conversationData.metadata.batch_call?.batch_call_recipient_id);
+       // Try to find user_id from recipient record, but don't fail if not found
+       let userId = null;
+       let campaignId = null;
 
-      // If no user_id found from recipient, try to find from batch_calls table
-      if (conversationData.metadata.batch_call?.batch_call_id) {
-        const { data: batchRecord } = await supabase
-          .from('batch_calls')
-          .select('user_id,campaign_id')
-          .eq('batch_id', conversationData.metadata.batch_call.batch_call_id)
-          .maybeSingle();
-        
-        userId = batchRecord?.user_id;
-        campaignId = batchRecord?.campaign_id
-        console.log('Found user_id from batch_calls:', userId);
-        console.log('Found campaignId from batch_calls:', campaignId);
-      }
+       // If no user_id found from recipient, try to find from batch_calls table
+       if (conversationData.metadata.batch_call?.batch_call_id) {
+         console.log('Looking up batch_call_id:', conversationData.metadata.batch_call.batch_call_id);
+
+         const { data: batchRecord, error: batchError } = await supabase
+           .from('batch_calls')
+           .select('user_id,campaign_id')
+           .eq('batch_id', conversationData.metadata.batch_call.batch_call_id)
+           .maybeSingle();
+
+         if (batchError) {
+           console.error('Error looking up batch_calls:', batchError);
+         }
+
+         userId = batchRecord?.user_id;
+         campaignId = batchRecord?.campaign_id;
+         console.log('Found user_id from batch_calls:', userId);
+         console.log('Found campaignId from batch_calls:', campaignId);
+         console.log('Batch record found:', !!batchRecord);
+       } else {
+         console.log('No batch_call_id found in metadata');
+       }
+
+       // Fallback: try to find campaign by phone number and recent timestamp if no batch found
+       if (!userId || !campaignId) {
+         console.log('Attempting fallback lookup by phone number and timestamp');
+         const phoneNumber = conversationData.metadata.phone_call?.external_number;
+
+         if (phoneNumber) {
+           // Look for recent campaigns with this phone number
+           const { data: recentCampaigns } = await supabase
+             .from('campaigns')
+             .select(`
+               id,
+               user_id,
+               phone_number,
+               created_at,
+               campaign_contact!inner(
+                 contact_id,
+                 contacts!inner(
+                   phone
+                 )
+               )
+             `)
+             .eq('campaign_contact.contacts.phone', phoneNumber)
+             .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Last 24 hours
+             .order('created_at', { ascending: false })
+             .limit(1);
+
+           if (recentCampaigns && recentCampaigns.length > 0) {
+             const campaign = recentCampaigns[0];
+             userId = campaign.user_id;
+             campaignId = campaign.id;
+             console.log('Found campaign via fallback:', { userId, campaignId, phone: phoneNumber });
+           }
+         }
+       }
 
       if (!userId) {
         console.error('Unable to determine user_id for conversation');
