@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { CsvUploader } from "@/components/contacts/CsvUploader";
 import { ContactsModal } from "@/components/contacts/ContactsModal";
+import { EditContactForm } from "@/components/contacts/EditContactForm";
 import { Users, Search, Plus, Upload, Trash2, Edit } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +29,7 @@ export default function Contacts() {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isManualDialogOpen, setIsManualDialogOpen] = useState(false);
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
 
   const { user } = useAuth();
 
@@ -279,7 +281,11 @@ export default function Contacts() {
                       {new Date(contact.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => setEditingContact(contact)}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
                     </TableCell>
@@ -297,6 +303,26 @@ export default function Contacts() {
         onClose={() => setIsManualDialogOpen(false)}
         onSave={handleManualContactsSaved}
       />
+
+      {/* Edit Contact Modal */}
+      {editingContact && (
+        <Dialog open={!!editingContact} onOpenChange={() => setEditingContact(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Contact</DialogTitle>
+            </DialogHeader>
+            <EditContactForm
+              contact={editingContact}
+              onSave={(updatedContact) => {
+                setEditingContact(null);
+                fetchContacts();
+                toast.success('Contact updated successfully');
+              }}
+              onCancel={() => setEditingContact(null)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
