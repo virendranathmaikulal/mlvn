@@ -199,6 +199,30 @@ serve(async (req) => {
               }
             } else {
               // Update existing recipient
+              // First ensure conversation exists if conversation_id is provided
+              if (recipient.conversation_id) {
+                const { data: batchCallData } = await supabase
+                  .from('batch_calls')
+                  .select('campaign_id')
+                  .eq('batch_id', batchId)
+                  .eq('user_id', userId)
+                  .single();
+
+                const { error: conversationUpsertError } = await supabase
+                  .from('conversations')
+                  .upsert({
+                    conversation_id: recipient.conversation_id,
+                    status: recipient.status,
+                    user_id: userId,
+                    campaign_id: batchCallData?.campaign_id || null,
+                  }, { onConflict: 'conversation_id' });
+
+                if (conversationUpsertError) {
+                  console.error('Error creating conversation placeholder:', conversationUpsertError);
+                  continue;
+                }
+              }
+
               const { error: recipientUpdateError } = await supabase
                 .from('recipients')
                 .update({
