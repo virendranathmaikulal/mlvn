@@ -17,7 +17,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useNavigate, useBeforeUnload } from "react-router-dom";
+import { useNavigate, useBeforeUnload, useBlocker } from "react-router-dom";
 
 const steps = [
   "Select Agent",
@@ -87,18 +87,18 @@ export default function RunCampaign() {
     { capture: true }
   );
 
-  // Handle route navigation attempts
-  useEffect(() => {
-    const handleBeforeNavigate = (e: PopStateEvent) => {
-      if (currentStep === 3 && savedCampaignId && !isLaunched) {
-        e.preventDefault();
-        setShowExitDialog(true);
-      }
-    };
+  // Block navigation when on review step with unsaved campaign
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      currentStep === 3 && savedCampaignId && !isLaunched &&
+      currentLocation.pathname !== nextLocation.pathname
+  );
 
-    window.addEventListener('popstate', handleBeforeNavigate);
-    return () => window.removeEventListener('popstate', handleBeforeNavigate);
-  }, [currentStep, savedCampaignId, isLaunched]);
+  useEffect(() => {
+    if (blocker.state === "blocked") {
+      setShowExitDialog(true);
+    }
+  }, [blocker.state]);
 
   useEffect(() => {
     if (user) {
@@ -189,7 +189,12 @@ export default function RunCampaign() {
         description: "The draft campaign has been deleted",
       });
 
-      navigate('/dashboard');
+      setShowExitDialog(false);
+      if (blocker.state === "blocked") {
+        blocker.proceed();
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error: any) {
       console.error('Error discarding campaign:', error);
       toast({
@@ -205,7 +210,12 @@ export default function RunCampaign() {
       title: "Campaign Saved",
       description: "Your draft campaign has been saved",
     });
-    navigate('/dashboard');
+    setShowExitDialog(false);
+    if (blocker.state === "blocked") {
+      blocker.proceed();
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   const handleCsvUpload = (uploadedContacts: Contact[]) => {
@@ -716,7 +726,12 @@ export default function RunCampaign() {
         </div>
       )}
 
-      <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+      <AlertDialog open={showExitDialog} onOpenChange={(open) => {
+        setShowExitDialog(open);
+        if (!open && blocker.state === "blocked") {
+          blocker.reset();
+        }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Save Your Campaign?</AlertDialogTitle>
