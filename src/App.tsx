@@ -14,6 +14,10 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import VoiceDashboard from "./pages/VoiceDashboard";
 import WhatsAppDashboard from "./pages/WhatsAppDashboard";
+import CreateWhatsAppCampaign from "./pages/CreateWhatsAppCampaign";
+import WhatsAppTemplates from "./pages/WhatsAppTemplates";
+import WhatsAppConversations from "./pages/WhatsAppConversations";
+import OrderLeads from "./pages/OrderLeads";
 import CreateAgent from "./pages/CreateAgent";
 import RunVoiceCampaign from "./pages/RunVoiceCampaign";
 import Analytics from "./pages/Analytics";
@@ -87,6 +91,34 @@ const App = () => (
               <ProtectedRoute>
                 <WhatsAppFeatureGuard>
                   <AppLayout><WhatsAppDashboard /></AppLayout>
+                </WhatsAppFeatureGuard>
+              </ProtectedRoute>
+            } />
+            <Route path="/campaigns/whatsapp" element={
+              <ProtectedRoute>
+                <WhatsAppFeatureGuard>
+                  <AppLayout><CreateWhatsAppCampaign /></AppLayout>
+                </WhatsAppFeatureGuard>
+              </ProtectedRoute>
+            } />
+            <Route path="/whatsapp/templates" element={
+              <ProtectedRoute>
+                <WhatsAppFeatureGuard>
+                  <AppLayout><WhatsAppTemplates /></AppLayout>
+                </WhatsAppFeatureGuard>
+              </ProtectedRoute>
+            } />
+            <Route path="/whatsapp/conversations" element={
+              <ProtectedRoute>
+                <WhatsAppFeatureGuard>
+                  <AppLayout><WhatsAppConversations /></AppLayout>
+                </WhatsAppFeatureGuard>
+              </ProtectedRoute>
+            } />
+            <Route path="/whatsapp/leads" element={
+              <ProtectedRoute>
+                <WhatsAppFeatureGuard>
+                  <AppLayout><OrderLeads /></AppLayout>
                 </WhatsAppFeatureGuard>
               </ProtectedRoute>
             } />
