@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, ChevronRight, Send, Users, Upload, Plus, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ChevronLeft, ChevronRight, Send, Users, Upload, Plus, X, FileText } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -29,10 +30,41 @@ export default function CreateWhatsAppCampaign() {
   const [isLaunching, setIsLaunching] = useState(false);
   const [showContactsModal, setShowContactsModal] = useState(false);
   const [showCsvUploader, setShowCsvUploader] = useState(false);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
 
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) fetchTemplates();
+  }, [user]);
+
+  const fetchTemplates = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_templates')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setTemplates(data || []);
+    } catch (error: any) {
+      console.error('Error fetching templates:', error);
+    }
+  };
+
+  const handleTemplateSelect = (templateId: string) => {
+    const template = templates.find(t => t.id === templateId);
+    if (template) {
+      setSelectedTemplateId(templateId);
+      setMessageTemplate(template.template_content);
+      setMediaUrl(template.media_url || '');
+    }
+  };
 
   const progress = ((currentStep + 1) / steps.length) * 100;
 
@@ -165,6 +197,29 @@ export default function CreateWhatsAppCampaign() {
                 <div>
                   <label className="block text-sm font-medium mb-2">Campaign Name *</label>
                   <Input value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="e.g., Summer Sale 2024" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Use Template (Optional)</label>
+                  <Select value={selectedTemplateId} onValueChange={handleTemplateSelect}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templates.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            {template.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {templates.length === 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      No templates found. <button onClick={() => navigate('/whatsapp/templates')} className="text-primary underline">Create one</button>
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">Message Template *</label>
