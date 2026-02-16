@@ -11,6 +11,8 @@ interface Profile {
   currency: string;
   call_rate: number;
   available_minutes: number;
+  has_voice_integration: boolean;
+  has_whatsapp_integration: boolean;
 }
 
 export function useProfile() {
