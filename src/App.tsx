@@ -5,13 +5,17 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { VoiceFeatureGuard } from "@/components/guards/VoiceFeatureGuard";
+import { WhatsAppFeatureGuard } from "@/components/guards/WhatsAppFeatureGuard";
+import { DashboardRouter } from "@/components/guards/DashboardRouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Homepage from "./pages/Homepage";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import Dashboard from "./pages/Dashboard";
+import VoiceDashboard from "./pages/VoiceDashboard";
+import WhatsAppDashboard from "./pages/WhatsAppDashboard";
 import CreateAgent from "./pages/CreateAgent";
-import RunCampaign from "./pages/RunCampaign";
+import RunVoiceCampaign from "./pages/RunVoiceCampaign";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import Support from "./pages/Support";
@@ -33,27 +37,60 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             
-            {/* Protected routes with sidebar */}
+            {/* Default dashboard - redirects based on feature flags */}
             <Route path="/dashboard" element={
               <ProtectedRoute>
-                <AppLayout><Dashboard /></AppLayout>
+                <DashboardRouter />
+              </ProtectedRoute>
+            } />
+            
+            {/* Voice routes */}
+            <Route path="/dashboard/voice" element={
+              <ProtectedRoute>
+                <VoiceFeatureGuard>
+                  <AppLayout><VoiceDashboard /></AppLayout>
+                </VoiceFeatureGuard>
               </ProtectedRoute>
             } />
             <Route path="/create-agent" element={
               <ProtectedRoute>
-                <AppLayout><CreateAgent /></AppLayout>
+                <VoiceFeatureGuard>
+                  <AppLayout><CreateAgent /></AppLayout>
+                </VoiceFeatureGuard>
               </ProtectedRoute>
             } />
+            <Route path="/campaigns/voice" element={
+              <ProtectedRoute>
+                <VoiceFeatureGuard>
+                  <AppLayout><RunVoiceCampaign /></AppLayout>
+                </VoiceFeatureGuard>
+              </ProtectedRoute>
+            } />
+            {/* Backward compatibility - redirect old route */}
             <Route path="/run-campaign" element={
               <ProtectedRoute>
-                <AppLayout><RunCampaign /></AppLayout>
+                <VoiceFeatureGuard>
+                  <AppLayout><RunVoiceCampaign /></AppLayout>
+                </VoiceFeatureGuard>
               </ProtectedRoute>
             } />
             <Route path="/analytics" element={
               <ProtectedRoute>
-                <AppLayout><Analytics /></AppLayout>
+                <VoiceFeatureGuard>
+                  <AppLayout><Analytics /></AppLayout>
+                </VoiceFeatureGuard>
               </ProtectedRoute>
             } />
+            
+            {/* WhatsApp routes */}
+            <Route path="/dashboard/whatsapp" element={
+              <ProtectedRoute>
+                <WhatsAppFeatureGuard>
+                  <AppLayout><WhatsAppDashboard /></AppLayout>
+                </WhatsAppFeatureGuard>
+              </ProtectedRoute>
+            } />
+            {/* Shared routes */}
             <Route path="/contacts" element={
               <ProtectedRoute>
                 <AppLayout><Contacts /></AppLayout>
