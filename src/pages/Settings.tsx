@@ -5,6 +5,8 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Phone, MessageCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
@@ -124,6 +126,44 @@ export default function Settings() {
           Manage your account preferences and platform settings
         </p>
       </div>
+
+      {/* Enabled Features */}
+      <Card className="shadow-soft border-card-border">
+        <CardHeader>
+          <CardTitle>Enabled Features</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Phone className="h-5 w-5" />
+                <span>Voice Campaigns</span>
+              </div>
+              <Badge variant={profile?.has_voice_integration ? "default" : "secondary"}>
+                {profile?.has_voice_integration ? "Enabled" : "Disabled"}
+              </Badge>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5" />
+                <span>WhatsApp Integration</span>
+              </div>
+              <Badge variant={profile?.has_whatsapp_integration ? "default" : "secondary"}>
+                {profile?.has_whatsapp_integration ? "Enabled" : "Disabled"}
+              </Badge>
+            </div>
+          </div>
+          
+          {!profile?.has_voice_integration && !profile?.has_whatsapp_integration && (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                No features are currently enabled. Please contact support to activate features.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Account Settings */}
       <Card className="shadow-soft border-card-border">
