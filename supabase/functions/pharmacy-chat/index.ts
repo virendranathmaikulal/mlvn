@@ -183,7 +183,7 @@ serve(async (req) => {
       conversationId = conversation.id;
       context = conversation.conversation_context;
     } else {
-      const { data: newConv } = await supabase
+      const { data: newConv, error } = await supabase
         .from('whatsapp_conversations')
         .insert({
           user_id,
@@ -193,7 +193,11 @@ serve(async (req) => {
         })
         .select('id')
         .single();
-      conversationId = newConv!.id;
+      
+      if (error || !newConv) {
+        throw new Error(`Failed to create conversation: ${error?.message}`);
+      }
+      conversationId = newConv.id;
     }
 
     // Save user message
@@ -204,6 +208,7 @@ serve(async (req) => {
       media_url: image_url,
       sender_phone: phone
     });
+
     const { response, context: updatedContext, orderComplete, orderLeadId } = await handlePharmacyMessage(
       message, phone, user_id, image_url, context
     );
