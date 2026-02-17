@@ -31,12 +31,13 @@ export const PharmacyChat = () => {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/pharmacy-chat', {
+      const response = await fetch('/functions/v1/pharmacy-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: input,
-          customerId: 'test-customer-123'
+          phone: 'test-customer-123',
+          user_id: 'pharmacy-owner-id' // Get from auth context
         })
       });
 
@@ -44,7 +45,11 @@ export const PharmacyChat = () => {
       
       const botMessage = { text: data.response, isUser: false, timestamp: new Date() };
       setMessages(prev => [...prev, botMessage]);
-      setCustomerData(data.customerData);
+      
+      if (data.order_complete) {
+        setCustomerData({ ...customerData, isComplete: true });
+        console.log('Order completed:', data.order_lead_id);
+      }
       
     } catch (error) {
       console.error('Chat error:', error);
