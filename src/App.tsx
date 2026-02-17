@@ -14,6 +14,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import VoiceDashboard from "./pages/VoiceDashboard";
 import WhatsAppDashboard from "./pages/WhatsAppDashboard";
+import PharmacyDashboard from "./pages/PharmacyDashboard";
 import CreateWhatsAppCampaign from "./pages/CreateWhatsAppCampaign";
 import WhatsAppTemplates from "./pages/WhatsAppTemplates";
 import WhatsAppConversations from "./pages/WhatsAppConversations";
@@ -122,7 +123,11 @@ const App = () => (
                 </WhatsAppFeatureGuard>
               </ProtectedRoute>
             } />
-            {/* Shared routes */}
+            <Route path="/pharmacy" element={
+              <ProtectedRoute>
+                <AppLayout><PharmacyDashboard /></AppLayout>
+              </ProtectedRoute>
+            } />
             <Route path="/contacts" element={
               <ProtectedRoute>
                 <AppLayout><Contacts /></AppLayout>
