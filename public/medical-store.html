@@ -55,7 +55,7 @@
 
         /* Hero */
         .hero {
-            background: linear-gradient(135deg, rgba(26, 79, 139, 0.92), rgba(0, 128, 128, 0.85)), url('https://images.unsplash.com/photo-1586015555751-63bb77f4322a?auto=format&fit=crop&q=80&w=1600') center/cover;
+            background: linear-gradient(to bottom, rgba(15, 23, 42, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%), url('photo2.png') center/cover no-repeat;
             padding: 100px 0;
             color: white;
             text-align: center;
@@ -114,12 +114,40 @@
         .whatsapp-float { position: fixed; bottom: 30px; right: 30px; background: #25D366; color: white; padding: 16px 28px; border-radius: 50px; text-decoration: none; font-weight: 700; box-shadow: 0 10px 25px rgba(37, 211, 102, 0.3); z-index: 1000; display: flex; align-items: center; gap: 10px; transition: 0.3s; }
         .whatsapp-float:hover { transform: scale(1.05); background: #20ba5a; }
 
+        /* Why Choose Us Marquee */
+        .why-choose { background: var(--light-bg); padding: 60px 0; overflow: hidden; }
+        .marquee-wrapper { overflow: hidden; }
+        .marquee { display: flex; gap: 30px; animation: scroll 40s linear infinite; }
+        .why-card { min-width: 350px; background: white; padding: 30px; border-radius: 12px; border: 1px solid #eef2f6; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+        .why-card h3 { color: var(--primary); font-size: 1.2rem; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .why-card h3 span { color: var(--accent); font-size: 1.5rem; }
+        .why-card p { color: var(--text-muted); font-size: 0.95rem; }
+        @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
         @media (max-width: 768px) {
-            .hero h1 { font-size: 2rem; }
-            .legacy-box { grid-template-columns: 1fr; padding: 30px; }
+            .top-bar .container { flex-direction: column; gap: 5px; text-align: center; }
+            .brand .title { font-size: 1.1rem; }
+            .brand .subtitle { font-size: 0.8rem; }
             .header-grid nav { display: none; }
+            .hero { padding: 60px 0; }
+            .hero h1 { font-size: 1.75rem; }
+            .hero p { font-size: 1rem; }
+            .hero-btns { flex-direction: column; }
+            .trust-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
+            .section-padding { padding: 50px 0; }
+            .section-title { font-size: 1.75rem; }
+            .service-grid { grid-template-columns: 1fr; }
+            .legacy-box { grid-template-columns: 1fr; padding: 30px; gap: 30px; }
+            .legacy-text h2 { font-size: 1.75rem; }
             .upload-wrapper { flex-direction: column; }
             .form-info, .form-main { width: 100%; }
+            .footer-grid { grid-template-columns: 1fr; gap: 30px; }
+            .whatsapp-float { padding: 12px 20px; font-size: 0.85rem; }
+        }
+        @media (max-width: 480px) {
+            .container { padding: 0 16px; }
+            .hero h1 { font-size: 1.5rem; }
+            .trust-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -144,7 +172,7 @@
                     <a href="#home">Home</a>
                     <a href="#services">Services</a>
                     <a href="#legacy">Our Legacy</a>
-                    <a href="#prescription">Upload</a>
+                    <a href="#findus">Find Us</a>
                 </nav>
                 <a href="tel:+915882180711" class="btn btn-primary" style="padding: 10px 20px;">Call Pharmacist</a>
             </div>
@@ -159,7 +187,6 @@
         <p>Your health is our legacy. Providing Pilibhit with genuine medicines, expert consultation, and surgical supplies for over 97 years.</p>
         <div class="hero-btns">
             <a href="https://wa.me/915882180711" class="btn btn-primary">Order via WhatsApp</a>
-            <a href="#prescription" class="btn btn-outline">Upload Prescription</a>
         </div>
     </div>
 </section>
@@ -213,6 +240,31 @@
     </div>
 </section>
 
+<section class="why-choose">
+    <div class="container">
+        <div class="text-center">
+            <span class="section-tag">Why Choose Us</span>
+            <h2 class="section-title">Your Trusted Healthcare Partner</h2>
+        </div>
+    </div>
+    <div class="marquee-wrapper">
+        <div class="marquee">
+            <div class="why-card"><h3><span>✅</span> 97+ Years of Trust</h3><p>Serving Pilibhit community since 1927 with dedication and care.</p></div>
+            <div class="why-card"><h3><span>✅</span> Genuine Medicines</h3><p>100% authentic medicines sourced directly from authorized distributors.</p></div>
+            <div class="why-card"><h3><span>✅</span> Expert Pharmacists</h3><p>Qualified and experienced pharmacists for proper guidance.</p></div>
+            <div class="why-card"><h3><span>✅</span> Competitive Prices</h3><p>Best prices in Pilibhit with regular discounts and offers.</p></div>
+            <div class="why-card"><h3><span>✅</span> Fast Delivery</h3><p>Quick home delivery within Pilibhit city limits.</p></div>
+            <div class="why-card"><h3><span>✅</span> Emergency Support</h3><p>24/7 availability for urgent medicine requirements.</p></div>
+            <div class="why-card"><h3><span>✅</span> 97+ Years of Trust</h3><p>Serving Pilibhit community since 1927 with dedication and care.</p></div>
+            <div class="why-card"><h3><span>✅</span> Genuine Medicines</h3><p>100% authentic medicines sourced directly from authorized distributors.</p></div>
+            <div class="why-card"><h3><span>✅</span> Expert Pharmacists</h3><p>Qualified and experienced pharmacists for proper guidance.</p></div>
+            <div class="why-card"><h3><span>✅</span> Competitive Prices</h3><p>Best prices in Pilibhit with regular discounts and offers.</p></div>
+            <div class="why-card"><h3><span>✅</span> Fast Delivery</h3><p>Quick home delivery within Pilibhit city limits.</p></div>
+            <div class="why-card"><h3><span>✅</span> Emergency Support</h3><p>24/7 availability for urgent medicine requirements.</p></div>
+        </div>
+    </div>
+</section>
+
 <section class="section-padding" id="legacy" style="background: var(--light-bg);">
     <div class="container">
         <div class="legacy-box">
@@ -244,44 +296,7 @@
     </div>
 </section>
 
-<section class="section-padding" id="prescription">
-    <div class="container">
-        <div class="text-center">
-            <span class="section-tag">Skip the Queue</span>
-            <h2 class="section-title">Digital Prescription Desk</h2>
-        </div>
-        <div class="upload-wrapper">
-            <div class="form-info">
-                <h3>Quick Delivery</h3>
-                <p style="margin-top: 15px; opacity: 0.9;">Upload your prescription. Our pharmacist will call you to confirm dosage and delivery time.</p>
-                <ul style="margin-top: 30px; font-size: 0.85rem; list-style: none;">
-                    <li>✓ Secure Data Handling</li>
-                    <li>✓ Pharmacist Review</li>
-                    <li>✓ Doorstep Delivery</li>
-                </ul>
-            </div>
-            <div class="form-main">
-                <form>
-                    <div class="form-group">
-                        <label>Patient Name / Contact Person</label>
-                        <input type="text" placeholder="Enter full name" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Phone Number</label>
-                        <input type="tel" placeholder="+91" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Upload Prescription (Image/PDF)</label>
-                        <input type="file" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="width: 100%;">Submit to Pharmacist</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</section>
-
-<section class="section-padding">
+<section class="section-padding" id="findus">
     <div class="container">
         <div class="text-center">
             <h2 class="section-title">Find Us</h2>
@@ -304,8 +319,8 @@
                 <ul>
                     <li><a href="#home">Home</a></li>
                     <li><a href="#services">Services</a></li>
-                    <li><a href="#prescription">Prescription Upload</a></li>
                     <li><a href="#legacy">Our Story</a></li>
+                    <li><a href="#findus">Find Us</a></li>
                 </ul>
             </div>
             <div class="footer-links">
