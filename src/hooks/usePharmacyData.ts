@@ -89,12 +89,18 @@ export function usePharmacyData() {
           .from('whatsapp_conversation_messages')
           .select('*')
           .eq('conversation_id', conversation.id)
-          .order('created_at', { ascending: true });
+          .order('timestamp', { ascending: true });
 
         if (msgError) {
           console.warn('Error fetching messages:', msgError);
         } else {
-          messages = messageData || [];
+          messages = (messageData || []).map(msg => ({
+            id: msg.id,
+            direction: msg.direction,
+            content: msg.content,
+            media_url: msg.media_url,
+            timestamp: msg.timestamp || msg.created_at
+          }));
         }
       }
 
