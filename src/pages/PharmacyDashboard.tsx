@@ -6,11 +6,16 @@ import { useProfile } from "@/hooks/useProfile";
 import { PharmacyOrdersList } from "@/components/pharmacy/PharmacyOrdersList";
 import { PharmacyOrderDetails } from "@/components/pharmacy/PharmacyOrderDetails";
 import { usePharmacyData } from "@/hooks/usePharmacyData";
+import { useOrderNotifications } from "@/hooks/useOrderNotifications";
+import { NotificationToggle } from "@/components/NotificationToggle";
 
 export default function PharmacyDashboard() {
   const navigate = useNavigate();
   const { profile } = useProfile();
   const { orders, conversations, isLoading, fetchOrders, fetchOrderDetails } = usePharmacyData();
+  
+  // Enable real-time notifications
+  useOrderNotifications(profile?.id);
   
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [orderDetailsData, setOrderDetailsData] = useState<any>(null);
@@ -70,10 +75,15 @@ export default function PharmacyDashboard() {
         <div className="space-y-6">
           {/* Welcome Section */}
           <div className="bg-gradient-to-r from-green-600 to-green-700 rounded-xl p-6 text-white shadow-lg">
-            <h2 className="text-3xl font-bold mb-2">Welcome back, {getFirstName()}!</h2>
-            <p className="text-white/90 text-lg">
-              Manage your pharmacy orders and customer conversations
-            </p>
+            <div className="flex justify-between items-start">
+              <div>
+                <h2 className="text-3xl font-bold mb-2">Welcome back, {getFirstName()}!</h2>
+                <p className="text-white/90 text-lg">
+                  Manage your pharmacy orders and customer conversations
+                </p>
+              </div>
+              <NotificationToggle />
+            </div>
           </div>
 
           {/* Quick Stats */}
