@@ -70,31 +70,36 @@ export function usePharmacyData() {
 
       if (orderError) throw orderError;
 
-      // Get conversation for this customer
-      const { data: conversation, error: convError } = await supabase
+      // Get ALL conversations for this customer phone number
+      const { data: allConversations, error: convError } = await supabase
         .from('whatsapp_conversations')
         .select('*')
         .eq('customer_phone', order.customer_phone)
-        .eq('conversation_type', 'pharmacy_order')
-        .single();
+        .order('created_at', { ascending: false });
+      
+      const conversation = allConversations?.[0] || null;
 
-      if (convError) {
-        console.warn('No conversation found for this order');
-      }
-
-      // Get messages if conversation exists
+      // Get messages from ALL conversations for this phone number
       let messages = [];
-      if (conversation) {
+      if (allConversations && allConversations.length > 0) {
+        const conversationIds = allConversations.map(conv => conv.id);
+        
         const { data: messageData, error: msgError } = await supabase
           .from('whatsapp_conversation_messages')
           .select('*')
-          .eq('conversation_id', conversation.id)
-          .order('created_at', { ascending: true });
-
+          .in('conversation_id', conversationIds)
+          .order('timestamp', { ascending: true });
+        
         if (msgError) {
           console.warn('Error fetching messages:', msgError);
         } else {
-          messages = messageData || [];
+          messages = (messageData || []).map(msg => ({
+            id: msg.id,
+            direction: msg.direction,
+            content: msg.content,
+            media_url: msg.media_url,
+            timestamp: msg.timestamp || msg.created_at
+          }));
         }
       }
 

@@ -400,35 +400,58 @@ export function PharmacyOrderDetails({
           <ScrollArea className="h-96">
             <div className="space-y-4">
               {messages && messages.length > 0 ? (
-                messages.map((message, index) => (
-                  <div key={index} className={`p-3 rounded-lg ${
-                    message.direction === 'outbound' ? 'bg-blue-50 ml-8' : 'bg-gray-50 mr-8'
-                  }`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant={message.direction === 'outbound' ? 'default' : 'secondary'}>
-                        {message.direction === 'outbound' ? 'Bot' : 'Customer'}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {formatDateTime(message.timestamp)}
-                      </span>
+                (() => {
+                  const messagesByDate = messages.reduce((acc, message) => {
+                    const date = new Date(message.timestamp).toDateString();
+                    if (!acc[date]) acc[date] = [];
+                    acc[date].push(message);
+                    return acc;
+                  }, {} as Record<string, typeof messages>);
+                  
+                  return Object.entries(messagesByDate).map(([date, dayMessages]) => (
+                    <div key={date} className="space-y-3">
+                      <div className="flex justify-center">
+                        <div className="bg-muted px-3 py-1 rounded-full text-sm text-muted-foreground">
+                          {new Date(date).toLocaleDateString('en-US', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })}
+                        </div>
+                      </div>
+                      {dayMessages.map((message) => (
+                        <div key={message.id} className={`p-3 rounded-lg ${
+                          message.direction === 'outbound' ? 'bg-blue-50 ml-8' : 'bg-gray-50 mr-8'
+                        }`}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant={message.direction === 'outbound' ? 'default' : 'secondary'}>
+                              {message.direction === 'outbound' ? 'Bot' : 'Customer'}
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">
+                              {formatDateTime(message.timestamp)}
+                            </span>
+                          </div>
+                          <p className="text-sm">{message.content}</p>
+                          {message.media_url && (
+                            <Button
+                              variant="link"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedImage(message.media_url!);
+                                setShowImageModal(true);
+                              }}
+                              className="p-0 mt-2 text-blue-600"
+                            >
+                              <ImageIcon className="h-4 w-4 mr-1" />
+                              View Image
+                            </Button>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                    <p className="text-sm">{message.content}</p>
-                    {message.media_url && (
-                      <Button
-                        variant="link"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedImage(message.media_url!);
-                          setShowImageModal(true);
-                        }}
-                        className="p-0 mt-2 text-blue-600"
-                      >
-                        <ImageIcon className="h-4 w-4 mr-1" />
-                        View Image
-                      </Button>
-                    )}
-                  </div>
-                ))
+                  ));
+                })()
               ) : (
                 <p className="text-center text-muted-foreground py-8">
                   No conversation history available

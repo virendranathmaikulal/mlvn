@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Mic, Phone, MessageCircle, Send, MessageSquare, ShoppingCart, FileText, Users, Settings, HelpCircle, Pill } from "lucide-react";
+import { Home, Mic, Phone, MessageCircle, Send, FileText, Users, Settings, HelpCircle, Pill } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import {
   Sidebar,
@@ -23,8 +23,6 @@ const voiceItems = [
 const whatsappItems = [
   { title: "WhatsApp Dashboard", url: "/dashboard/whatsapp", icon: MessageCircle },
   { title: "Campaigns", url: "/campaigns/whatsapp", icon: Send },
-  { title: "Conversations", url: "/whatsapp/conversations", icon: MessageSquare },
-  { title: "Order Leads", url: "/whatsapp/leads", icon: ShoppingCart },
   { title: "Templates", url: "/whatsapp/templates", icon: FileText },
   { title: "Pharmacy Orders", url: "/pharmacy", icon: Pill },
 ];

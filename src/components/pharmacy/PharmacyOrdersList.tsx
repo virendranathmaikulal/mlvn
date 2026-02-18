@@ -3,7 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Package, Search, X, Eye, Clock, User, Phone } from "lucide-react";
+import { Package, Search, X, Eye, Clock, User, Phone, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
   TableBody,
@@ -29,14 +37,18 @@ interface PharmacyOrder {
 interface PharmacyOrdersListProps {
   orders: PharmacyOrder[];
   onViewDetails: (orderId: string) => void;
+  onStatusUpdate?: () => void;
   isLoading?: boolean;
 }
 
 export function PharmacyOrdersList({
   orders,
   onViewDetails,
+  onStatusUpdate,
   isLoading
 }: PharmacyOrdersListProps) {
+  const { toast } = useToast();
+  const [updating, setUpdating] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -51,6 +63,14 @@ export function PharmacyOrdersList({
     return matchesSearch && matchesStatus;
   });
 
+  const statusOptions = [
+    { value: 'new', label: 'New' },
+    { value: 'contacted', label: 'Contacted' },
+    { value: 'confirmed', label: 'Confirmed' },
+    { value: 'delivered', label: 'Delivered' },
+    { value: 'cancelled', label: 'Cancelled' }
+  ];
+
   const getStatusBadge = (status: string) => {
     const statusMap = {
       'new': { variant: 'destructive' as const, label: 'New', className: 'bg-red-100 text-red-800' },
@@ -62,6 +82,35 @@ export function PharmacyOrdersList({
 
     const statusInfo = statusMap[status as keyof typeof statusMap] || { variant: 'secondary' as const, label: status };
     return <Badge variant={statusInfo.variant} className={statusInfo.className}>{statusInfo.label}</Badge>;
+  };
+
+  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+    setUpdating(orderId);
+    try {
+      const { error } = await supabase
+        .from('order_leads')
+        .update({ lead_status: newStatus })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Status Updated",
+        description: `Order status changed to ${newStatus}`,
+      });
+
+      if (onStatusUpdate) {
+        onStatusUpdate();
+      }
+    } catch (error: any) {
+      toast({
+        title: "Update Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(null);
+    }
   };
 
   const formatDateTime = (dateString: string) => {
@@ -209,15 +258,40 @@ export function PharmacyOrdersList({
                     )}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onViewDetails(order.id)}
-                      className="gap-2"
-                    >
-                      <Eye className="h-4 w-4" />
-                      View
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onViewDetails(order.id)}
+                        className="gap-2"
+                      >
+                        <Eye className="h-4 w-4" />
+                        View
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={updating === order.id}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {statusOptions
+                            .filter(status => status.value !== order.lead_status)
+                            .map((status) => (
+                              <DropdownMenuItem
+                                key={status.value}
+                                onClick={() => handleStatusUpdate(order.id, status.value)}
+                              >
+                                Mark as {status.label}
+                              </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               )) : (
