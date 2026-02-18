@@ -69,18 +69,52 @@ export function usePharmacyData() {
         .single();
 
       if (orderError) throw orderError;
+      
+      console.log('Order details:', order);
+      console.log('Looking for conversation with phone:', order.customer_phone);
 
-      // Get conversation for this customer
-      const { data: conversation, error: convError } = await supabase
+      // Get conversation for this customer - try multiple approaches
+      let conversation = null;
+      let conversationError = null;
+      
+      // First try exact match with conversation_type
+      const { data: conv1, error: convError1 } = await supabase
         .from('whatsapp_conversations')
         .select('*')
         .eq('customer_phone', order.customer_phone)
-        .eq('conversation_type', 'pharmacy_order')
-        .single();
-
-      if (convError) {
-        console.warn('No conversation found for this order');
+        .eq('conversation_type', 'pharmacy_order');
+        
+      console.log('Conversation search 1 (exact + type):', conv1, convError1);
+      
+      if (conv1 && conv1.length > 0) {
+        conversation = conv1[0];
+      } else {
+        // Try without conversation_type filter
+        const { data: conv2, error: convError2 } = await supabase
+          .from('whatsapp_conversations')
+          .select('*')
+          .eq('customer_phone', order.customer_phone);
+          
+        console.log('Conversation search 2 (phone only):', conv2, convError2);
+        
+        if (conv2 && conv2.length > 0) {
+          conversation = conv2[0];
+        } else {
+          // Try with LIKE for partial phone matches
+          const { data: conv3, error: convError3 } = await supabase
+            .from('whatsapp_conversations')
+            .select('*')
+            .ilike('customer_phone', `%${order.customer_phone.slice(-10)}%`);
+            
+          console.log('Conversation search 3 (partial phone):', conv3, convError3);
+          
+          if (conv3 && conv3.length > 0) {
+            conversation = conv3[0];
+          }
+        }
       }
+
+      console.log('Final conversation found:', conversation);
 
       // Get messages if conversation exists
       let messages = [];
@@ -91,6 +125,8 @@ export function usePharmacyData() {
           .eq('conversation_id', conversation.id)
           .order('timestamp', { ascending: true });
 
+        console.log('Messages query result:', messageData, msgError);
+        
         if (msgError) {
           console.warn('Error fetching messages:', msgError);
         } else {
@@ -101,7 +137,14 @@ export function usePharmacyData() {
             media_url: msg.media_url,
             timestamp: msg.timestamp || msg.created_at
           }));
+          console.log('Processed messages:', messages);
         }
+      } else {
+        console.log('No conversation found, checking all conversations for debugging...');
+        const { data: allConvs } = await supabase
+          .from('whatsapp_conversations')
+          .select('*');
+        console.log('All conversations:', allConvs);
       }
 
       return {
