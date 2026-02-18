@@ -125,6 +125,7 @@ export default function PharmacyDashboard() {
           <PharmacyOrdersList
             orders={orders}
             onViewDetails={handleViewDetails}
+            onStatusUpdate={fetchOrders}
             isLoading={isLoading}
           />
         </div>
