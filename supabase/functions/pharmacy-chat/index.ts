@@ -107,35 +107,60 @@ RESPONSE FORMAT (MUST BE VALID JSON ONLY):
 
 OUTPUT ONLY THE JSON. NO MARKDOWN, NO EXPLANATIONS.`;
 
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-exp:generateContent?key=${Deno.env.get('GEMINI_API_KEY')}`, {
+  const apiKey = Deno.env.get('GEMINI_API_KEY');
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY not configured');
+  }
+
+  // Use v1 API with gemini-2.5-flash
+  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  console.log('Calling Gemini API: v1/gemini-2.5-flash');
+  
+  const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: systemPrompt }] }],
+      contents: [{
+        parts: [{ text: systemPrompt }]
+      }],
       generationConfig: {
         temperature: 0.7,
-        responseMimeType: "application/json"
+        maxOutputTokens: 2048
       }
     })
   });
-
-  if (!response.ok) throw new Error(`Gemini API failed: ${response.status}`);
+  
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error('Gemini API error:', response.status, errorBody);
+    throw new Error(`Gemini API failed: ${response.status}`);
+  }
+  
+  console.log('✓ Gemini API success');
   
   const result = await response.json();
   if (!result.candidates?.[0]) throw new Error('No response from Gemini');
   
-  const jsonText = result.candidates[0].content.parts[0].text;
-  let llmOutput;
+  let responseText = result.candidates[0].content.parts[0].text;
+  console.log('Raw LLM response:', responseText.substring(0, 150));
   
+  // Extract JSON from response (handle markdown wrapping)
+  let jsonMatch = responseText.match(/```json\s*([\s\S]*?)```/);
+  if (jsonMatch) {
+    responseText = jsonMatch[1];
+  } else {
+    jsonMatch = responseText.match(/```\s*([\s\S]*?)```/);
+    if (jsonMatch) responseText = jsonMatch[1];
+  }
+  
+  let llmOutput;
   try {
-    llmOutput = JSON.parse(jsonText.replace(/```json|```/g, '').trim());
+    llmOutput = JSON.parse(responseText.trim());
+    console.log('✓ JSON parsed successfully');
   } catch (e) {
-    console.error('JSON parse error:', e, 'Raw:', jsonText);
-    return {
-      response: "Sorry, main temporarily unavailable hoon. Please thoda wait karein.",
-      context: currentState,
-      orderComplete: false
-    };
+    console.error('JSON parse error:', e.message);
+    console.error('Cleaned text:', responseText.substring(0, 200));
+    throw new Error(`Failed to parse LLM response: ${e.message}`);
   }
 
   // Merge items intelligently
@@ -172,7 +197,7 @@ OUTPUT ONLY THE JSON. NO MARKDOWN, NO EXPLANATIONS.`;
 
   // Auto-summarize if conversation exceeds 20 messages
   if ((count || 0) > 20 && !currentState.summary) {
-    const summaryResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-exp:generateContent?key=${Deno.env.get('GEMINI_API_KEY')}`, {
+    const summaryResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -320,6 +345,7 @@ serve(async (req) => {
     // BUG FIX #8: Handle LLM API failures gracefully with retry
     let response, updatedContext, orderComplete, orderLeadId;
     let retries = 2;
+    let lastError;
     
     while (retries > 0) {
       try {
@@ -328,8 +354,12 @@ serve(async (req) => {
         ));
         break;
       } catch (error) {
+        lastError = error;
+        console.error(`Attempt ${3 - retries} failed:`, error.message);
         retries--;
         if (retries === 0) {
+          // Log final error for debugging
+          console.error('All retries exhausted. Final error:', lastError);
           // Final fallback
           response = "Sorry, main abhi busy hoon. Thodi der mein dobara message karein.";
           updatedContext = context || { items: [], is_complete: false };
