@@ -254,7 +254,6 @@ export function PharmacyOrdersList({
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          // Create a temporary image modal or navigate to view
                           window.open(order.prescription_image_url, '_blank');
                         }}
                         className="gap-2 bg-green-50 text-green-700 hover:bg-green-100"
@@ -265,6 +264,10 @@ export function PharmacyOrdersList({
                     ) : (
                       <span className="text-muted-foreground text-sm">None</span>
                     )}
+                    {/* Debug info */}
+                    <div className="text-xs text-gray-400 mt-1">
+                      {order.prescription_image_url ? 'Has URL' : 'No URL'}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
