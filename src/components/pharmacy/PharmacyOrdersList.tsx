@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Package, Search, X, Eye, Clock, User, Phone, MoreHorizontal } from "lucide-react";
+import { Package, Search, X, Eye, Clock, User, Phone, MoreHorizontal, Image as ImageIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -250,9 +250,18 @@ export function PharmacyOrdersList({
                   </TableCell>
                   <TableCell>
                     {order.prescription_image_url ? (
-                      <Badge variant="outline" className="bg-green-50 text-green-700">
-                        Image
-                      </Badge>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          // Create a temporary image modal or navigate to view
+                          window.open(order.prescription_image_url, '_blank');
+                        }}
+                        className="gap-2 bg-green-50 text-green-700 hover:bg-green-100"
+                      >
+                        <ImageIcon className="h-4 w-4" />
+                        View
+                      </Button>
                     ) : (
                       <span className="text-muted-foreground text-sm">None</span>
                     )}
