@@ -1,88 +1,39 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useState } from 'react';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 
-interface Profile {
-  id: string;
-  user_id: string;
-  full_name: string | null;
-  company: string | null;
-  phone: string | null;
-  currency: string;
-  call_rate: number;
-  available_minutes: number;
-  has_voice_integration: boolean;
-  has_whatsapp_integration: boolean;
-}
-
 export function useProfile() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async () => {
+  useEffect(() => {
     if (!user) {
+      setProfile(null);
       setLoading(false);
       return;
     }
 
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (error) {
+    // Real-time listener for profile changes
+    const unsubscribe = onSnapshot(
+      doc(db, 'profiles', user.uid),
+      (doc) => {
+        if (doc.exists()) {
+          setProfile({ id: doc.id, ...doc.data() });
+        } else {
+          setProfile(null);
+        }
+        setLoading(false);
+      },
+      (error) => {
         console.error('Error fetching profile:', error);
-      } else {
-        setProfile(data);
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    );
 
-  const updateProfile = async (updates: Partial<Profile>) => {
-    if (!user) return;
-
-    try {
-      // First try to update existing profile
-      const { data, error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('user_id', user.id)
-        .select()
-        .single();
-
-      if (error && error.code === 'PGRST116') {
-        // Profile doesn't exist, create it
-        const { data: newData, error: insertError } = await supabase
-          .from('profiles')
-          .insert({ ...updates, user_id: user.id })
-          .select()
-          .single();
-
-        if (insertError) throw insertError;
-        setProfile(newData);
-      } else if (error) {
-        throw error;
-      } else {
-        setProfile(data);
-      }
-
-      return { success: true };
-    } catch (error: any) {
-      console.error('Profile update error:', error);
-      return { success: false, error: error.message };
-    }
-  };
-
-  useEffect(() => {
-    fetchProfile();
+    return unsubscribe;
   }, [user]);
 
-  return { profile, loading, updateProfile, refetch: fetchProfile };
+  return { profile, loading };
 }
