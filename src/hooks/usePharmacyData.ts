@@ -1,125 +1,142 @@
-import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-
-export interface PharmacyOrder {
-  id: string;
-  customer_phone: string;
-  customer_name?: string;
-  customer_address?: string;
-  medicines?: Array<{ name: string; quantity: string }>;
-  lead_status: 'new' | 'contacted' | 'confirmed' | 'delivered' | 'cancelled';
-  prescription_image_url?: string;
-  created_at: string;
-  notes?: string;
-}
-
-export interface PharmacyConversation {
-  id: string;
-  customer_phone: string;
-  conversation_status: 'active' | 'resolved' | 'abandoned';
-  last_message_at: string;
-  created_at: string;
-}
+import { useState, useEffect } from 'react';
+import { 
+  collection, 
+  query, 
+  where, 
+  orderBy, 
+  getDocs,
+  doc,
+  getDoc,
+  updateDoc
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function usePharmacyData() {
-  const [orders, setOrders] = useState<PharmacyOrder[]>([]);
-  const [conversations, setConversations] = useState<PharmacyConversation[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
+  const [orders, setOrders] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = async () => {
+    if (!user) {
+      setOrders([]);
+      setIsLoading(false);
+      return;
+    }
+    
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('order_leads')
-        .select('*')
-        .eq('lead_source', 'whatsapp_bot')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setOrders(data || []);
+      const q = query(
+        collection(db, 'order_leads'),
+        where('user_id', '==', user.uid),
+        orderBy('created_at', 'desc')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const ordersData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      setOrders(ordersData);
     } catch (error) {
       console.error('Error fetching orders:', error);
+      setOrders([]);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  };
 
-  const fetchConversations = useCallback(async () => {
+  const fetchConversations = async () => {
+    if (!user) {
+      setConversations([]);
+      return;
+    }
+
     try {
-      const { data, error } = await supabase
-        .from('whatsapp_conversations')
-        .select('*')
-        .eq('conversation_type', 'pharmacy_order')
-        .order('last_message_at', { ascending: false });
-
-      if (error) throw error;
-      setConversations(data || []);
+      const q = query(
+        collection(db, 'whatsapp_conversations'),
+        where('user_id', '==', user.uid),
+        orderBy('last_message_at', 'desc')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const conversationsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      setConversations(conversationsData);
     } catch (error) {
       console.error('Error fetching conversations:', error);
+      setConversations([]);
     }
-  }, []);
+  };
 
-  const fetchOrderDetails = useCallback(async (orderId: string) => {
+  const fetchOrderDetails = async (orderId: string) => {
     try {
-      // Get order details
-      const { data: order, error: orderError } = await supabase
-        .from('order_leads')
-        .select('*')
-        .eq('id', orderId)
-        .single();
-
-      if (orderError) throw orderError;
-
-      // Get ALL conversations for this customer phone number
-      const { data: allConversations, error: convError } = await supabase
-        .from('whatsapp_conversations')
-        .select('*')
-        .eq('customer_phone', order.customer_phone)
-        .order('created_at', { ascending: false });
+      // Fetch order
+      const orderDoc = await getDoc(doc(db, 'order_leads', orderId));
+      if (!orderDoc.exists()) {
+        throw new Error('Order not found');
+      }
+      const order = { id: orderDoc.id, ...orderDoc.data() };
       
-      const conversation = allConversations?.[0] || null;
-
-      // Get messages from ALL conversations for this phone number
-      let messages = [];
-      if (allConversations && allConversations.length > 0) {
-        const conversationIds = allConversations.map(conv => conv.id);
-        
-        const { data: messageData, error: msgError } = await supabase
-          .from('whatsapp_conversation_messages')
-          .select('*')
-          .in('conversation_id', conversationIds)
-          .order('timestamp', { ascending: true });
-        
-        if (msgError) {
-          console.warn('Error fetching messages:', msgError);
-        } else {
-          messages = (messageData || []).map(msg => ({
-            id: msg.id,
-            direction: msg.direction,
-            content: msg.content,
-            media_url: msg.media_url,
-            timestamp: msg.timestamp || msg.created_at
-          }));
+      // Fetch conversation if exists
+      let conversation = null;
+      if (order.conversation_id) {
+        const convDoc = await getDoc(doc(db, 'whatsapp_conversations', order.conversation_id));
+        if (convDoc.exists()) {
+          conversation = { id: convDoc.id, ...convDoc.data() };
         }
       }
-
-      return {
-        order,
-        conversation,
-        messages
-      };
+      
+      // Fetch messages
+      let messages: any[] = [];
+      if (order.conversation_id) {
+        const messagesQuery = query(
+          collection(db, 'whatsapp_conversation_messages'),
+          where('conversation_id', '==', order.conversation_id),
+          orderBy('created_at', 'asc')
+        );
+        const messagesSnapshot = await getDocs(messagesQuery);
+        messages = messagesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      }
+      
+      return { order, conversation, messages };
     } catch (error) {
       console.error('Error fetching order details:', error);
       return null;
     }
-  }, []);
+  };
 
-  return {
-    orders,
-    conversations,
-    isLoading,
-    fetchOrders,
-    fetchConversations,
-    fetchOrderDetails
+  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    try {
+      await updateDoc(doc(db, 'order_leads', orderId), {
+        lead_status: newStatus,
+        updated_at: new Date().toISOString()
+      });
+      
+      // Refresh orders
+      await fetchOrders();
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+    fetchConversations();
+  }, [user]);
+
+  return { 
+    orders, 
+    conversations, 
+    isLoading, 
+    fetchOrders, 
+    fetchOrderDetails,
+    updateOrderStatus 
   };
 }
