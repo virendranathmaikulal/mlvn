@@ -1,11 +1,18 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { 
+  User,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  onAuthStateChanged
+} from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
+  session: any;
   loading: boolean;
   signUp: (email: string, password: string, fullName?: string, company?: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -16,64 +23,52 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setUser(user);
+      if (user) {
+        const token = await user.getIdToken();
+        setSession({ access_token: token });
+      } else {
+        setSession(null);
       }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return unsubscribe;
   }, []);
 
   const signUp = async (email: string, password: string, fullName?: string, company?: string) => {
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            full_name: fullName,
-            company: company,
-          }
-        }
+      // Create profile document in Firestore
+      await setDoc(doc(db, 'profiles', userCredential.user.uid), {
+        user_id: userCredential.user.uid,
+        full_name: fullName || '',
+        company: company || '',
+        phone: '',
+        available_minutes: 0,
+        call_rate: 0,
+        currency: 'INR',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       });
 
-      if (error) {
-        toast({
-          title: "Sign up failed",
-          description: error.message,
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Account created!",
-          description: "Please check your email to verify your account.",
-        });
-      }
+      toast({
+        title: "Account created!",
+        description: "Welcome to MLVN",
+      });
 
-      return { error };
+      return { error: null };
     } catch (error: any) {
       toast({
         title: "Sign up failed",
-        description: error.message || "An unexpected error occurred",
+        description: error.message,
         variant: "destructive"
       });
       return { error };
@@ -82,40 +77,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      await signInWithEmailAndPassword(auth, email, password);
+      
+      toast({
+        title: "Welcome back!",
+        description: "You have been successfully logged in.",
       });
 
-      if (error) {
-        toast({
-          title: "Sign in failed",
-          description: error.message,
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Welcome back!",
-          description: "You have been successfully logged in.",
-        });
-      }
-
-      return { error };
+      return { error: null };
     } catch (error: any) {
       toast({
         title: "Sign in failed",
-        description: error.message || "An unexpected error occurred",
+        description: error.message,
         variant: "destructive"
       });
       return { error };
     }
   };
 
-
-
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      await firebaseSignOut(auth);
       toast({
         title: "Signed out",
         description: "You have been successfully logged out.",
@@ -123,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error: any) {
       toast({
         title: "Sign out failed",
-        description: error.message || "An unexpected error occurred",
+        description: error.message,
         variant: "destructive"
       });
     }
