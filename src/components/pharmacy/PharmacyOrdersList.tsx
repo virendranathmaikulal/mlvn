@@ -264,10 +264,6 @@ export function PharmacyOrdersList({
                     ) : (
                       <span className="text-muted-foreground text-sm">None</span>
                     )}
-                    {/* Debug info */}
-                    <div className="text-xs text-gray-400 mt-1">
-                      {order.prescription_image_url ? 'Has URL' : 'No URL'}
-                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
