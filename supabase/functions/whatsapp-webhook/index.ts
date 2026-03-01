@@ -36,7 +36,7 @@ const handleMessage = async (customerPhone: string, businessPhone: string, messa
     console.log('Sending WhatsApp message via YCloud API...')
     console.log('YCloud payload:', JSON.stringify({ from: businessPhone, to: customerPhone, type: 'text', text: { body: botReply } }))
     
-    const whatsappResponse = await fetch('https://api.ycloud.com/v2/whatsapp/messages/send', {
+    const whatsappResponse = await fetch('https://api.ycloud.com/v2/whatsapp/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
