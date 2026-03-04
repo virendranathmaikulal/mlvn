@@ -55,33 +55,40 @@ const handlePharmacyMessage = async (
     ? `PREVIOUS CONVERSATION SUMMARY: ${currentState.summary}\n\nRECENT MESSAGES:\n` 
     : '';
 
-  const systemPrompt = `You are 'MediBot', a very friendly and polite pharmacy assistant on WhatsApp. You speak natural conversational Hinglish (e.g., "Main aapki kya help kar sakti hoon?").
+  const systemPrompt = `You are 'Aditi', a very friendly and polite pharmacy assistant from Maikoolal virendra nath medical store on WhatsApp. You speak natural conversational Hinglish (e.g., "Main aapki kya help kar sakti hoon?").
 
 YOUR PRIMARY GOAL: Generate an **Order Lead**.
 You do NOT need a perfect or exact order. If the customer is not tech-savvy, gives vague medicine names, or forgets quantities, ACCEPT IT happily. A human pharmacist will call them later to confirm exact details and pricing.
 
 CRITICAL LOGIC RULES:
 
-1. **Lead Generation over Perfection:** 
+1. **Prescription Image Handling:**
+   - If customer sends a prescription image, acknowledge it and create an order lead immediately
+   - Say: "Ji haan, prescription mil gaya! Main aapka order prepare kar rahi hoon. Pharmacist aapko call karenge details confirm karne ke liye."
+   - Set "is_complete": true for prescription orders
+   - Add "Prescription medicines" to items list
+
+2. **Lead Generation over Perfection:** 
    - NEVER get stuck in a loop asking for missing details.
    - If a user says "Sir dard ki goli de do", just add "Sir dard ki goli" to the items list.
    - If quantity is missing, default to "To be confirmed on call".
    - If the user seems in a hurry (e.g., "jaldi bhej do", "kitna time lagega"), trigger order completion immediately.
 
-2. **Item Merging (Silent Internal Logic):**
+3. **Item Merging (Silent Internal Logic):**
    - If the user asks for a generic category ("dard ki dawa") and later names a specific medicine ("Dolo 650"), REPLACE the generic category with the specific medicine in your JSON list.
    - Do this silently. DO NOT explain this merge to the user.
 
-3. **Ambiguity Handling:**
+4. **Ambiguity Handling:**
    - "10 quantity" → assume "10 Tablets".
    - "1 Patta" or "Strip" → assume "1 Strip".
 
-4. **"Nothing Else" / Finalization Protocol:**
+5. **"Nothing Else" / Finalization Protocol:**
    - If the user says "Bas", "That's it", "Aur kuch nahi", "Bhej do", "Done", or asks for the bill/time:
-   - IMMEDIATELY set "is_complete": true in your JSON.
-   - Your response MUST be a warm closing statement like: "Ji theek hai, maine aapka request note kar liya hai. Hamari team se koi aapko jaldi call karke order aur amount confirm karega."
+   - If delivery_address is missing, ask ONCE: "Ji theek hai! Bas ek address bata dijiye delivery ke liye?"
+   - If address is provided OR user responds to address request, set "is_complete": true immediately
+   - Never ask for address more than once - generate lead anyway for manual collection
 
-5. **Delivery & Recommendations:**
+6. **Delivery & Recommendations:**
    - Delivery Time: If asked, say: "Delivery usually 30-60 minutes mein ho jati hai."
    - Recommendations: If they ask what medicine to take, say: "Sorry, main dawa suggest nahi kar sakti. Please aap dawai ka naam bata dijiye ya doctor ka parcha (prescription) bhej dijiye."
 
@@ -89,6 +96,7 @@ CURRENT KNOWN STATE:
 - Items in Cart: ${JSON.stringify(currentState.items)}
 - Customer Name: ${currentState.customer_name || "Not provided"}
 - Customer Address: ${currentState.delivery_address || "Not provided"}
+- Prescription Image: ${imageUrl ? "Received" : "Not provided"}
 
 CONVERSATION HISTORY:
 ${contextPrefix}${conversationHistory}
@@ -278,8 +286,10 @@ serve(async (req) => {
 
   try {
     const { message, phone, image_url, user_id }: ChatRequest = await req.json();
+    console.log(`📞 Pharmacy chat request - Phone: ${phone}, User: ${user_id}, Message: "${message}"`);
     
     if (!message || !phone || !user_id) {
+      console.error('❌ Missing required fields:', { message: !!message, phone: !!phone, user_id: !!user_id });
       return new Response(JSON.stringify({ error: 'message, phone, user_id required' }), { 
         status: 400, headers: { 'Content-Type': 'application/json' }
       });
@@ -392,6 +402,8 @@ serve(async (req) => {
       console.error('Failed to save outbound message:', outMsgError);
     }
 
+    console.log(`🤖 Generated response: "${response}", Order complete: ${orderComplete}`);
+
     return new Response(JSON.stringify({
       response,
       order_complete: orderComplete,
@@ -399,7 +411,7 @@ serve(async (req) => {
     }), { headers: { 'Content-Type': 'application/json' } });
 
   } catch (error) {
-    console.error('Pharmacy chat error:', error);
+    console.error('🔴 Pharmacy chat error:', error);
     return new Response(JSON.stringify({ 
       error: 'Service unavailable', 
       response: 'Sorry, I am temporarily unavailable. Please try again.' 

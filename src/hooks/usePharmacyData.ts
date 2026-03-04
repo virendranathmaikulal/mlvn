@@ -31,12 +31,32 @@ export function usePharmacyData() {
     try {
       const { data, error } = await supabase
         .from('order_leads')
-        .select('*')
+        .select(`
+          *,
+          whatsapp_conversations!inner(
+            id,
+            whatsapp_conversation_messages(
+              media_url
+            )
+          )
+        `)
         .eq('lead_source', 'whatsapp_bot')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setOrders(data || []);
+      
+      // Process orders to include prescription images from messages
+      const processedOrders = (data || []).map(order => {
+        const messages = order.whatsapp_conversations?.whatsapp_conversation_messages || [];
+        const prescriptionImage = messages.find(msg => msg.media_url)?.media_url;
+        
+        return {
+          ...order,
+          prescription_image_url: prescriptionImage || order.prescription_image_url
+        };
+      });
+      
+      setOrders(processedOrders);
     } catch (error) {
       console.error('Error fetching orders:', error);
     } finally {
