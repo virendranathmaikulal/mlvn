@@ -3,6 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -61,6 +71,9 @@ export function PharmacyOrderDetails({
   const [isEditing, setIsEditing] = useState(false);
   const [editedOrder, setEditedOrder] = useState<any>(null);
   const [updating, setUpdating] = useState(false);
+  const [confirmDelivery, setConfirmDelivery] = useState(false);
+
+  const isDelivered = order?.lead_status === 'delivered';
 
   if (isLoading || !orderData) {
     return (
@@ -92,6 +105,11 @@ export function PharmacyOrderDetails({
   };
 
   const handleStatusUpdate = async (newStatus: string) => {
+    if (newStatus === 'delivered') {
+      setConfirmDelivery(true);
+      return;
+    }
+    
     setUpdating(true);
     try {
       const { error } = await supabase
@@ -104,6 +122,35 @@ export function PharmacyOrderDetails({
       toast({
         title: "Status Updated",
         description: `Order status changed to ${newStatus}`,
+      });
+
+      onStatusUpdate();
+    } catch (error: any) {
+      toast({
+        title: "Update Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const confirmDeliveryUpdate = async () => {
+    setUpdating(true);
+    setConfirmDelivery(false);
+    
+    try {
+      const { error } = await supabase
+        .from('order_leads')
+        .update({ lead_status: 'delivered' })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Order Delivered",
+        description: "Order marked as delivered. This order is now view-only.",
       });
 
       onStatusUpdate();
@@ -152,6 +199,14 @@ export function PharmacyOrderDetails({
   };
 
   const startEditing = () => {
+    if (isDelivered) {
+      toast({
+        title: "Cannot Edit",
+        description: "Delivered orders are view-only and cannot be modified.",
+        variant: "destructive",
+      });
+      return;
+    }
     setEditedOrder({
       customer_name: order.customer_name || '',
       customer_address: order.customer_address || '',
@@ -180,11 +235,16 @@ export function PharmacyOrderDetails({
             </div>
             <div className="flex items-center gap-2">
               {getStatusBadge(order.lead_status)}
-              {!isEditing && (
+              {!isEditing && !isDelivered && (
                 <Button variant="outline" size="sm" onClick={startEditing} className="gap-2 border-blue-300 hover:bg-blue-50">
                   <Edit className="h-4 w-4" />
                   Edit Order
                 </Button>
+              )}
+              {isDelivered && (
+                <Badge variant="outline" className="bg-gray-100 text-gray-600">
+                  View Only
+                </Badge>
               )}
             </div>
           </div>
@@ -546,6 +606,24 @@ export function PharmacyOrderDetails({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delivery Confirmation Dialog */}
+      <AlertDialog open={confirmDelivery} onOpenChange={setConfirmDelivery}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Order Delivery</AlertDialogTitle>
+            <AlertDialogDescription>
+              Once marked as delivered, this order will become view-only and cannot be modified. Are you sure you want to proceed?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeliveryUpdate} className="bg-green-600 hover:bg-green-700">
+              Yes, Mark as Delivered
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
