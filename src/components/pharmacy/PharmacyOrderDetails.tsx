@@ -73,8 +73,6 @@ export function PharmacyOrderDetails({
   const [updating, setUpdating] = useState(false);
   const [confirmDelivery, setConfirmDelivery] = useState(false);
 
-  const isDelivered = order?.lead_status === 'delivered';
-
   if (isLoading || !orderData) {
     return (
       <div className="space-y-6">
@@ -86,6 +84,7 @@ export function PharmacyOrderDetails({
   }
 
   const { order, conversation, messages } = orderData;
+  const isDelivered = order?.lead_status === 'delivered';
 
   const getStatusBadge = (status: string) => {
     const statusMap = {
