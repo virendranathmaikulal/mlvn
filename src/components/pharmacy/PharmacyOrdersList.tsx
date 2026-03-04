@@ -10,6 +10,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -53,6 +63,7 @@ export function PharmacyOrdersList({
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<'date' | 'status'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [confirmDelivery, setConfirmDelivery] = useState<{orderId: string, show: boolean}>({orderId: '', show: false});
 
   const filteredOrders = orders
     .filter(order => {
@@ -100,6 +111,11 @@ export function PharmacyOrdersList({
   };
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+    if (newStatus === 'delivered') {
+      setConfirmDelivery({orderId, show: true});
+      return;
+    }
+    
     setUpdating(orderId);
     try {
       const { error } = await supabase
@@ -112,6 +128,38 @@ export function PharmacyOrdersList({
       toast({
         title: "Status Updated",
         description: `Order status changed to ${newStatus}`,
+      });
+
+      if (onStatusUpdate) {
+        onStatusUpdate();
+      }
+    } catch (error: any) {
+      toast({
+        title: "Update Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const confirmDeliveryUpdate = async () => {
+    const orderId = confirmDelivery.orderId;
+    setUpdating(orderId);
+    setConfirmDelivery({orderId: '', show: false});
+    
+    try {
+      const { error } = await supabase
+        .from('order_leads')
+        .update({ lead_status: 'delivered' })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Order Delivered",
+        description: "Order marked as delivered. This order is now view-only.",
       });
 
       if (onStatusUpdate) {
@@ -143,16 +191,18 @@ export function PharmacyOrdersList({
   }
 
   return (
-    <Card className="shadow-soft border-card-border">
-      <CardHeader>
+    <Card className="shadow-lg border-2 border-green-100">
+      <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <div className="w-10 h-10 rounded-lg bg-green-600 flex items-center justify-center">
+                <Package className="h-5 w-5 text-white" />
+              </div>
               Pharmacy Orders
             </CardTitle>
-            <p className="text-muted-foreground mt-1">
-              {filteredOrders.length} orders {searchQuery && `matching "${searchQuery}"`}
+            <p className="text-muted-foreground mt-2 text-sm">
+              {filteredOrders.length} {filteredOrders.length === 1 ? 'order' : 'orders'} {searchQuery && `matching "${searchQuery}"`}
             </p>
           </div>
         </div>
@@ -220,20 +270,50 @@ export function PharmacyOrdersList({
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Customer</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Medicines</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Prescription</TableHead>
-                <TableHead>Actions</TableHead>
+              <TableRow className="bg-gray-50 hover:bg-gray-50">
+                <TableHead className="font-semibold text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Customer
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Phone
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Medicines
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4" />
+                    Status
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Date
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4" />
+                    Prescription
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700 text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredOrders.length > 0 ? filteredOrders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell>
+                <TableRow key={order.id} className="hover:bg-blue-50/50 transition-colors">
+                  <TableCell className="py-4">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
                         {(order.customer_name || 'U')[0].toUpperCase()}
@@ -250,13 +330,13 @@ export function PharmacyOrdersList({
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-4">
                     <div className="flex items-center gap-1">
                       <Phone className="h-4 w-4 text-muted-foreground" />
                       {order.customer_phone}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-4">
                     <div className="max-w-48">
                       {order.medicines && order.medicines.length > 0 ? (
                         <div className="space-y-1">
@@ -276,10 +356,10 @@ export function PharmacyOrdersList({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-4">
                     {getStatusBadge(order.lead_status)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-4">
                     <div className="flex items-center gap-1">
                       <Clock className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">
@@ -287,7 +367,7 @@ export function PharmacyOrdersList({
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-4">
                     {order.prescription_image_url ? (
                       <Button
                         variant="outline"
@@ -304,7 +384,7 @@ export function PharmacyOrdersList({
                       <span className="text-muted-foreground text-sm">None</span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-4">
                     <div className="flex items-center gap-2">
                       <Button
                         variant="default"
@@ -320,7 +400,7 @@ export function PharmacyOrdersList({
                           <Button
                             variant="outline"
                             size="sm"
-                            disabled={updating === order.id}
+                            disabled={updating === order.id || order.lead_status === 'delivered'}
                           >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
@@ -363,6 +443,23 @@ export function PharmacyOrdersList({
           </Table>
         </div>
       </CardContent>
+      
+      <AlertDialog open={confirmDelivery.show} onOpenChange={(open) => setConfirmDelivery({orderId: '', show: open})}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Order Delivery</AlertDialogTitle>
+            <AlertDialogDescription>
+              Once marked as delivered, this order will become view-only and cannot be modified. Are you sure you want to proceed?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeliveryUpdate} className="bg-green-600 hover:bg-green-700">
+              Yes, Mark as Delivered
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
