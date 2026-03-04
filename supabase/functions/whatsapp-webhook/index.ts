@@ -10,7 +10,7 @@ const PHARMACY_CHAT_URL = `${Deno.env.get('SUPABASE_URL')}/functions/v1/pharmacy
 const YCLOUD_API_KEY = Deno.env.get('YCLOUD_API_KEY')
 const DEFAULT_USER_ID = Deno.env.get('DEFAULT_PHARMACY_USER_ID')
 
-const handleMessage = async (customerPhone: string, businessPhone: string, message: string, imageUrl?: string) => {
+const handleMessage = async (customerPhone: string, businessPhone: string, message: string, imageUrl?: string, customerName?: string) => {
   console.log('Calling pharmacy-chat function...')
   
   const chatResponse = await fetch(PHARMACY_CHAT_URL, {
@@ -23,7 +23,8 @@ const handleMessage = async (customerPhone: string, businessPhone: string, messa
       message,
       phone: customerPhone,
       user_id: DEFAULT_USER_ID,
-      image_url: imageUrl
+      image_url: imageUrl,
+      customer_name: customerName
     })
   })
 
@@ -86,16 +87,18 @@ serve(async (req) => {
         const customerPhone = msg.from
         const businessPhone = msg.to // This is your business WhatsApp number
         const messageText = msg.text.body
-        console.log(`From: ${customerPhone}, To: ${businessPhone}, Message: ${messageText}`)
+        const customerName = msg.customerProfile?.name
+        console.log(`From: ${customerPhone}, To: ${businessPhone}, Message: ${messageText}, Name: ${customerName}`)
 
-        await handleMessage(customerPhone, businessPhone, messageText, null)
+        await handleMessage(customerPhone, businessPhone, messageText, null, customerName)
       } else if (msg.type === 'image' && msg.image) {
         const customerPhone = msg.from
         const businessPhone = msg.to
         const imageUrl = msg.image.link
-        console.log(`From: ${customerPhone}, To: ${businessPhone}, Image: ${imageUrl}`)
+        const customerName = msg.customerProfile?.name
+        console.log(`From: ${customerPhone}, To: ${businessPhone}, Image: ${imageUrl}, Name: ${customerName}`)
 
-        await handleMessage(customerPhone, businessPhone, 'Prescription image received', imageUrl)
+        await handleMessage(customerPhone, businessPhone, 'Prescription image received', imageUrl, customerName)
       }
     }
 
