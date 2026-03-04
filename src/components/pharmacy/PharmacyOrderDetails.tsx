@@ -3,10 +3,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { 
   MessageSquare, 
   User, 
@@ -19,7 +30,9 @@ import {
   XCircle,
   Edit,
   Save,
-  X
+  X,
+  Plus,
+  Trash2
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -58,6 +71,7 @@ export function PharmacyOrderDetails({
   const [isEditing, setIsEditing] = useState(false);
   const [editedOrder, setEditedOrder] = useState<any>(null);
   const [updating, setUpdating] = useState(false);
+  const [confirmDelivery, setConfirmDelivery] = useState(false);
 
   if (isLoading || !orderData) {
     return (
@@ -70,14 +84,15 @@ export function PharmacyOrderDetails({
   }
 
   const { order, conversation, messages } = orderData;
+  const isDelivered = order?.lead_status === 'delivered';
 
   const getStatusBadge = (status: string) => {
     const statusMap = {
-      'new': { variant: 'destructive' as const, label: 'New', className: 'bg-red-100 text-red-800' },
-      'contacted': { variant: 'secondary' as const, label: 'Contacted', className: 'bg-yellow-100 text-yellow-800' },
-      'confirmed': { variant: 'default' as const, label: 'Confirmed', className: 'bg-blue-100 text-blue-800' },
-      'delivered': { variant: 'default' as const, label: 'Delivered', className: 'bg-green-100 text-green-800' },
-      'cancelled': { variant: 'outline' as const, label: 'Cancelled', className: 'bg-gray-100 text-gray-800' }
+      'new': { variant: 'destructive' as const, label: '🔴 New', className: 'bg-red-100 text-red-800 font-medium' },
+      'contacted': { variant: 'secondary' as const, label: '🟡 Contacted', className: 'bg-yellow-100 text-yellow-800 font-medium' },
+      'confirmed': { variant: 'default' as const, label: '🔵 Confirmed', className: 'bg-blue-100 text-blue-800 font-medium' },
+      'delivered': { variant: 'default' as const, label: '🟢 Delivered', className: 'bg-green-100 text-green-800 font-medium' },
+      'cancelled': { variant: 'outline' as const, label: '⚫ Cancelled', className: 'bg-gray-100 text-gray-800 font-medium' }
     };
 
     const statusInfo = statusMap[status as keyof typeof statusMap] || { variant: 'secondary' as const, label: status };
@@ -89,6 +104,11 @@ export function PharmacyOrderDetails({
   };
 
   const handleStatusUpdate = async (newStatus: string) => {
+    if (newStatus === 'delivered') {
+      setConfirmDelivery(true);
+      return;
+    }
+    
     setUpdating(true);
     try {
       const { error } = await supabase
@@ -101,6 +121,35 @@ export function PharmacyOrderDetails({
       toast({
         title: "Status Updated",
         description: `Order status changed to ${newStatus}`,
+      });
+
+      onStatusUpdate();
+    } catch (error: any) {
+      toast({
+        title: "Update Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const confirmDeliveryUpdate = async () => {
+    setUpdating(true);
+    setConfirmDelivery(false);
+    
+    try {
+      const { error } = await supabase
+        .from('order_leads')
+        .update({ lead_status: 'delivered' })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Order Delivered",
+        description: "Order marked as delivered. This order is now view-only.",
       });
 
       onStatusUpdate();
@@ -149,6 +198,14 @@ export function PharmacyOrderDetails({
   };
 
   const startEditing = () => {
+    if (isDelivered) {
+      toast({
+        title: "Cannot Edit",
+        description: "Delivered orders are view-only and cannot be modified.",
+        variant: "destructive",
+      });
+      return;
+    }
     setEditedOrder({
       customer_name: order.customer_name || '',
       customer_address: order.customer_address || '',
@@ -161,66 +218,95 @@ export function PharmacyOrderDetails({
   return (
     <div className="space-y-6">
       {/* Order Header */}
-      <Card className="shadow-soft border-card-border">
-        <CardHeader>
+      <Card className="shadow-lg border-2 border-blue-100">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Order #{orderId.slice(-8)}
-            </CardTitle>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
+                <Package className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-xl">Order #{orderId.slice(-8)}</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Created {formatDateTime(order.created_at)}
+                </p>
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               {getStatusBadge(order.lead_status)}
-              {!isEditing && (
-                <Button variant="outline" size="sm" onClick={startEditing} className="gap-2">
+              {!isEditing && !isDelivered && (
+                <Button variant="outline" size="sm" onClick={startEditing} className="gap-2 border-blue-300 hover:bg-blue-50">
                   <Edit className="h-4 w-4" />
-                  Edit
+                  Edit Order
                 </Button>
+              )}
+              {isDelivered && (
+                <Badge variant="outline" className="bg-gray-100 text-gray-600">
+                  View Only
+                </Badge>
               )}
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Customer Info */}
             <div className="space-y-4">
-              <h3 className="font-semibold flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Customer Information
-              </h3>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                  <User className="h-4 w-4 text-green-600" />
+                </div>
+                <h3 className="font-semibold text-lg">Customer Information</h3>
+              </div>
               
               {isEditing ? (
-                <div className="space-y-3">
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
                   <div>
-                    <Label htmlFor="name">Name</Label>
+                    <Label htmlFor="name" className="text-sm font-medium">Full Name *</Label>
                     <Input
                       id="name"
                       value={editedOrder.customer_name}
                       onChange={(e) => setEditedOrder({...editedOrder, customer_name: e.target.value})}
+                      placeholder="Enter customer name"
+                      className="mt-1"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="address">Address</Label>
+                    <Label htmlFor="address" className="text-sm font-medium">Delivery Address *</Label>
                     <Textarea
                       id="address"
                       value={editedOrder.customer_address}
                       onChange={(e) => setEditedOrder({...editedOrder, customer_address: e.target.value})}
+                      placeholder="Enter complete delivery address"
                       rows={3}
+                      className="mt-1"
                     />
                   </div>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span>{order.customer_name || 'Not provided'}</span>
+                <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <User className="h-5 w-5 text-gray-600" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Name</p>
+                      <p className="font-medium">{order.customer_name || 'Not provided'}</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{order.customer_phone}</span>
+                  <Separator />
+                  <div className="flex items-center gap-3">
+                    <Phone className="h-5 w-5 text-gray-600" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Phone</p>
+                      <p className="font-medium">{order.customer_phone}</p>
+                    </div>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground mt-1" />
-                    <span className="text-sm">{order.customer_address || 'Not provided'}</span>
+                  <Separator />
+                  <div className="flex items-start gap-3">
+                    <MapPin className="h-5 w-5 text-gray-600 mt-1" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Address</p>
+                      <p className="text-sm">{order.customer_address || 'Not provided'}</p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -228,30 +314,41 @@ export function PharmacyOrderDetails({
 
             {/* Order Info */}
             <div className="space-y-4">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Package className="h-4 w-4" />
-                Order Details
-              </h3>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{formatDateTime(order.created_at)}</span>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                  <Package className="h-4 w-4 text-purple-600" />
+                </div>
+                <h3 className="font-semibold text-lg">Order Details</h3>
+              </div>
+              <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Clock className="h-5 w-5 text-gray-600" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Order Date</p>
+                    <p className="font-medium">{formatDateTime(order.created_at)}</p>
+                  </div>
                 </div>
                 {order.prescription_image_url && (
-                  <div className="flex items-center gap-2">
-                    <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                    <Button
-                      variant="link"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedImage(order.prescription_image_url);
-                        setShowImageModal(true);
-                      }}
-                      className="p-0 h-auto text-blue-600"
-                    >
-                      View Prescription Image
-                    </Button>
-                  </div>
+                  <>
+                    <Separator />
+                    <div className="flex items-center gap-3">
+                      <ImageIcon className="h-5 w-5 text-gray-600" />
+                      <div className="flex-1">
+                        <p className="text-xs text-muted-foreground">Prescription</p>
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedImage(order.prescription_image_url);
+                            setShowImageModal(true);
+                          }}
+                          className="p-0 h-auto text-blue-600 font-medium"
+                        >
+                          View Prescription Image →
+                        </Button>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -259,41 +356,14 @@ export function PharmacyOrderDetails({
 
           {/* Medicines */}
           <div className="mt-6">
-            <h3 className="font-semibold mb-3">Medicines Requested</h3>
-            {isEditing ? (
-              <div className="space-y-2">
-                {editedOrder.medicines.map((med: any, idx: number) => (
-                  <div key={idx} className="flex gap-2">
-                    <Input
-                      placeholder="Medicine name"
-                      value={med.name}
-                      onChange={(e) => {
-                        const updated = [...editedOrder.medicines];
-                        updated[idx] = {...updated[idx], name: e.target.value};
-                        setEditedOrder({...editedOrder, medicines: updated});
-                      }}
-                    />
-                    <Input
-                      placeholder="Quantity"
-                      value={med.quantity}
-                      onChange={(e) => {
-                        const updated = [...editedOrder.medicines];
-                        updated[idx] = {...updated[idx], quantity: e.target.value};
-                        setEditedOrder({...editedOrder, medicines: updated});
-                      }}
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const updated = editedOrder.medicines.filter((_: any, i: number) => i !== idx);
-                        setEditedOrder({...editedOrder, medicines: updated});
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
+                  <Package className="h-4 w-4 text-orange-600" />
+                </div>
+                <h3 className="font-semibold text-lg">Medicines Requested</h3>
+              </div>
+              {isEditing && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -303,21 +373,71 @@ export function PharmacyOrderDetails({
                       medicines: [...editedOrder.medicines, {name: '', quantity: ''}]
                     });
                   }}
+                  className="gap-2"
                 >
+                  <Plus className="h-4 w-4" />
                   Add Medicine
                 </Button>
+              )}
+            </div>
+            {isEditing ? (
+              <div className="space-y-3">
+                {editedOrder.medicines.map((med: any, idx: number) => (
+                  <div key={idx} className="flex gap-2 bg-gray-50 p-3 rounded-lg">
+                    <div className="flex-1">
+                      <Input
+                        placeholder="Medicine name"
+                        value={med.name}
+                        onChange={(e) => {
+                          const updated = [...editedOrder.medicines];
+                          updated[idx] = {...updated[idx], name: e.target.value};
+                          setEditedOrder({...editedOrder, medicines: updated});
+                        }}
+                      />
+                    </div>
+                    <div className="w-32">
+                      <Input
+                        placeholder="Quantity"
+                        value={med.quantity}
+                        onChange={(e) => {
+                          const updated = [...editedOrder.medicines];
+                          updated[idx] = {...updated[idx], quantity: e.target.value};
+                          setEditedOrder({...editedOrder, medicines: updated});
+                        }}
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const updated = editedOrder.medicines.filter((_: any, i: number) => i !== idx);
+                        setEditedOrder({...editedOrder, medicines: updated});
+                      }}
+                      className="text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {order.medicines && order.medicines.length > 0 ? (
                   order.medicines.map((med: any, idx: number) => (
-                    <div key={idx} className="p-3 border rounded-lg">
-                      <div className="font-medium">{med.name}</div>
-                      <div className="text-sm text-muted-foreground">Quantity: {med.quantity}</div>
+                    <div key={idx} className="p-4 border-2 border-gray-200 rounded-lg bg-white hover:border-blue-300 transition-colors">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="font-semibold text-base">{med.name}</div>
+                          <div className="text-sm text-muted-foreground mt-1">Qty: {med.quantity}</div>
+                        </div>
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+                          {idx + 1}
+                        </div>
+                      </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-muted-foreground">No medicines specified</p>
+                  <p className="text-muted-foreground col-span-2 text-center py-4">No medicines specified</p>
                 )}
               </div>
             )}
@@ -325,48 +445,56 @@ export function PharmacyOrderDetails({
 
           {/* Notes */}
           <div className="mt-6">
-            <h3 className="font-semibold mb-3">Notes</h3>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
+                <MessageSquare className="h-4 w-4 text-yellow-600" />
+              </div>
+              <h3 className="font-semibold text-lg">Notes</h3>
+            </div>
             {isEditing ? (
               <Textarea
-                placeholder="Add notes about this order..."
+                placeholder="Add notes about this order (special instructions, delivery preferences, etc.)"
                 value={editedOrder.notes}
                 onChange={(e) => setEditedOrder({...editedOrder, notes: e.target.value})}
-                rows={3}
+                rows={4}
+                className="bg-gray-50"
               />
             ) : (
-              <p className="text-sm text-muted-foreground">
-                {order.notes || 'No notes added'}
-              </p>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm">
+                  {order.notes || 'No notes added'}
+                </p>
+              </div>
             )}
           </div>
 
           {/* Action Buttons */}
-          <div className="mt-6 flex gap-2">
+          <div className="mt-6 flex gap-3 pt-4 border-t">
             {isEditing ? (
               <>
-                <Button onClick={handleSaveEdit} disabled={updating} className="gap-2">
+                <Button onClick={handleSaveEdit} disabled={updating} className="gap-2 bg-green-600 hover:bg-green-700">
                   <Save className="h-4 w-4" />
                   Save Changes
                 </Button>
-                <Button variant="outline" onClick={() => setIsEditing(false)}>
+                <Button variant="outline" onClick={() => setIsEditing(false)} disabled={updating}>
                   Cancel
                 </Button>
               </>
             ) : (
               <>
                 {order.lead_status === 'new' && (
-                  <Button onClick={() => handleStatusUpdate('contacted')} disabled={updating}>
+                  <Button onClick={() => handleStatusUpdate('contacted')} disabled={updating} className="bg-yellow-600 hover:bg-yellow-700">
                     Mark as Contacted
                   </Button>
                 )}
                 {order.lead_status === 'contacted' && (
-                  <Button onClick={() => handleStatusUpdate('confirmed')} disabled={updating} className="gap-2">
+                  <Button onClick={() => handleStatusUpdate('confirmed')} disabled={updating} className="gap-2 bg-blue-600 hover:bg-blue-700">
                     <CheckCircle className="h-4 w-4" />
                     Confirm Order
                   </Button>
                 )}
                 {order.lead_status === 'confirmed' && (
-                  <Button onClick={() => handleStatusUpdate('delivered')} disabled={updating} className="gap-2">
+                  <Button onClick={() => handleStatusUpdate('delivered')} disabled={updating} className="gap-2 bg-green-600 hover:bg-green-700">
                     <CheckCircle className="h-4 w-4" />
                     Mark as Delivered
                   </Button>
@@ -477,6 +605,24 @@ export function PharmacyOrderDetails({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delivery Confirmation Dialog */}
+      <AlertDialog open={confirmDelivery} onOpenChange={setConfirmDelivery}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Order Delivery</AlertDialogTitle>
+            <AlertDialogDescription>
+              Once marked as delivered, this order will become view-only and cannot be modified. Are you sure you want to proceed?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeliveryUpdate} className="bg-green-600 hover:bg-green-700">
+              Yes, Mark as Delivered
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

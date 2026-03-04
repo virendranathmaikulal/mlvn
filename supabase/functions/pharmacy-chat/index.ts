@@ -20,6 +20,7 @@ interface ChatRequest {
   phone: string;
   image_url?: string;
   user_id: string;
+  customer_name?: string;
 }
 
 const supabase = createClient(
@@ -218,24 +219,11 @@ OUTPUT ONLY THE JSON. NO MARKDOWN, NO EXPLANATIONS.`;
     }
   }
 
-  // BUG FIX #3: Prevent empty order completion
   const orderComplete = updatedContext.is_complete && updatedContext.items.length > 0;
 
   let orderLeadId: string | undefined;
   if (orderComplete) {
-    // BUG FIX #1: Prevent duplicate order leads with idempotency check
-    const { data: existingLead } = await supabase
-      .from('order_leads')
-      .select('id')
-      .eq('conversation_id', conversationId)
-      .eq('lead_status', 'new')
-      .single();
-    
-    if (!existingLead) {
-      orderLeadId = await createOrderLead(userId, phone, conversationId, updatedContext, imageUrl);
-    } else {
-      orderLeadId = existingLead.id;
-    }
+    orderLeadId = await createOrderLead(userId, phone, conversationId, updatedContext, imageUrl);
   }
 
   return { 
@@ -285,8 +273,8 @@ serve(async (req) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
   try {
-    const { message, phone, image_url, user_id }: ChatRequest = await req.json();
-    console.log(`📞 Pharmacy chat request - Phone: ${phone}, User: ${user_id}, Message: "${message}"`);
+    const { message, phone, image_url, user_id, customer_name }: ChatRequest = await req.json();
+    console.log(`📞 Pharmacy chat request - Phone: ${phone}, User: ${user_id}, Name: ${customer_name || 'N/A'}, Message: "${message}"`);
     
     if (!message || !phone || !user_id) {
       console.error('❌ Missing required fields:', { message: !!message, phone: !!phone, user_id: !!user_id });
@@ -295,29 +283,24 @@ serve(async (req) => {
       });
     }
 
-    // BUG FIX #2: Allow reopening resolved conversations for repeat customers
-    const { data: conversation } = await supabase
+    // Find active conversation or create new one for repeat orders
+    const { data: conversations } = await supabase
       .from('whatsapp_conversations')
       .select('*')
       .eq('customer_phone', phone)
       .eq('user_id', user_id)
-      .in('conversation_status', ['active', 'resolved'])
       .order('last_message_at', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(2);
 
     let conversationId: string;
     let context: ConversationContext | undefined;
     
-    if (conversation) {
-      conversationId = conversation.id;
-      // BUG FIX #9: Validate and sanitize context
+    const activeConv = conversations?.find(c => c.conversation_status === 'active');
+    
+    if (activeConv) {
+      conversationId = activeConv.id;
       try {
-        context = conversation.conversation_context || { items: [], is_complete: false };
-        // Reset completion if conversation was resolved
-        if (conversation.conversation_status === 'resolved') {
-          context = { ...context, is_complete: false };
-        }
+        context = activeConv.conversation_context || { items: [], is_complete: false };
       } catch (e) {
         context = { items: [], is_complete: false };
       }
@@ -327,6 +310,7 @@ serve(async (req) => {
         .insert({
           user_id,
           customer_phone: phone,
+          customer_name: customer_name || null,
           conversation_type: 'pharmacy_order',
           conversation_status: 'active'
         })
@@ -337,6 +321,7 @@ serve(async (req) => {
         throw new Error(`Failed to create conversation: ${error?.message}`);
       }
       conversationId = newConv.id;
+      context = { items: [], is_complete: false };
     }
 
     // BUG FIX #5: Handle message save failure
@@ -380,11 +365,12 @@ serve(async (req) => {
       }
     }
 
-    // Update conversation context
+    // Update conversation context and name
     await supabase
       .from('whatsapp_conversations')
       .update({ 
         conversation_context: updatedContext,
+        customer_name: customer_name || undefined,
         last_message_at: new Date().toISOString(),
         conversation_status: orderComplete ? 'resolved' : 'active'
       })

@@ -3,13 +3,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Package, Search, X, Eye, Clock, User, Phone, MoreHorizontal, Image as ImageIcon } from "lucide-react";
+import { Package, Search, X, Eye, Clock, User, Phone, MoreHorizontal, Image as ImageIcon, Filter, ArrowUpDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -51,17 +61,33 @@ export function PharmacyOrdersList({
   const [updating, setUpdating] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<'date' | 'status'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [confirmDelivery, setConfirmDelivery] = useState<{orderId: string, show: boolean}>({orderId: '', show: false});
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = !searchQuery.trim() || 
-      order.customer_phone?.includes(searchQuery) ||
-      order.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.medicines?.some(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesStatus = statusFilter === "all" || order.lead_status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+  const filteredOrders = orders
+    .filter(order => {
+      const matchesSearch = !searchQuery.trim() || 
+        order.customer_phone?.includes(searchQuery) ||
+        order.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.medicines?.some(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      const matchesStatus = statusFilter === "all" || order.lead_status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'date') {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+      } else {
+        const statusOrder = ['new', 'contacted', 'confirmed', 'delivered', 'cancelled'];
+        const indexA = statusOrder.indexOf(a.lead_status);
+        const indexB = statusOrder.indexOf(b.lead_status);
+        return sortOrder === 'desc' ? indexB - indexA : indexA - indexB;
+      }
+    });
 
   const statusOptions = [
     { value: 'new', label: 'New' },
@@ -73,11 +99,11 @@ export function PharmacyOrdersList({
 
   const getStatusBadge = (status: string) => {
     const statusMap = {
-      'new': { variant: 'destructive' as const, label: 'New', className: 'bg-red-100 text-red-800' },
-      'contacted': { variant: 'secondary' as const, label: 'Contacted', className: 'bg-yellow-100 text-yellow-800' },
-      'confirmed': { variant: 'default' as const, label: 'Confirmed', className: 'bg-blue-100 text-blue-800' },
-      'delivered': { variant: 'default' as const, label: 'Delivered', className: 'bg-green-100 text-green-800' },
-      'cancelled': { variant: 'outline' as const, label: 'Cancelled', className: 'bg-gray-100 text-gray-800' }
+      'new': { variant: 'destructive' as const, label: '🔴 New', className: 'bg-red-100 text-red-800 font-medium' },
+      'contacted': { variant: 'secondary' as const, label: '🟡 Contacted', className: 'bg-yellow-100 text-yellow-800 font-medium' },
+      'confirmed': { variant: 'default' as const, label: '🔵 Confirmed', className: 'bg-blue-100 text-blue-800 font-medium' },
+      'delivered': { variant: 'default' as const, label: '🟢 Delivered', className: 'bg-green-100 text-green-800 font-medium' },
+      'cancelled': { variant: 'outline' as const, label: '⚫ Cancelled', className: 'bg-gray-100 text-gray-800 font-medium' }
     };
 
     const statusInfo = statusMap[status as keyof typeof statusMap] || { variant: 'secondary' as const, label: status };
@@ -85,6 +111,11 @@ export function PharmacyOrdersList({
   };
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+    if (newStatus === 'delivered') {
+      setConfirmDelivery({orderId, show: true});
+      return;
+    }
+    
     setUpdating(orderId);
     try {
       const { error } = await supabase
@@ -97,6 +128,38 @@ export function PharmacyOrdersList({
       toast({
         title: "Status Updated",
         description: `Order status changed to ${newStatus}`,
+      });
+
+      if (onStatusUpdate) {
+        onStatusUpdate();
+      }
+    } catch (error: any) {
+      toast({
+        title: "Update Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const confirmDeliveryUpdate = async () => {
+    const orderId = confirmDelivery.orderId;
+    setUpdating(orderId);
+    setConfirmDelivery({orderId: '', show: false});
+    
+    try {
+      const { error } = await supabase
+        .from('order_leads')
+        .update({ lead_status: 'delivered' })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Order Delivered",
+        description: "Order marked as delivered. This order is now view-only.",
       });
 
       if (onStatusUpdate) {
@@ -128,27 +191,29 @@ export function PharmacyOrdersList({
   }
 
   return (
-    <Card className="shadow-soft border-card-border">
-      <CardHeader>
+    <Card className="shadow-lg border-2 border-green-100">
+      <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <div className="w-10 h-10 rounded-lg bg-green-600 flex items-center justify-center">
+                <Package className="h-5 w-5 text-white" />
+              </div>
               Pharmacy Orders
             </CardTitle>
-            <p className="text-muted-foreground mt-1">
-              {filteredOrders.length} orders {searchQuery && `matching "${searchQuery}"`}
+            <p className="text-muted-foreground mt-2 text-sm">
+              {filteredOrders.length} {filteredOrders.length === 1 ? 'order' : 'orders'} {searchQuery && `matching "${searchQuery}"`}
             </p>
           </div>
         </div>
         
         {/* Search and Filter */}
-        <div className="flex gap-4 mt-4">
-          <div className="relative flex-1 max-w-sm">
+        <div className="flex flex-col sm:flex-row gap-3 mt-4">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search orders..."
+              placeholder="Search by name, phone, or medicine..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 pr-10"
@@ -165,59 +230,113 @@ export function PharmacyOrdersList({
             )}
           </div>
           
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-input rounded-md bg-background"
-          >
-            <option value="all">All Status</option>
-            <option value="new">New</option>
-            <option value="contacted">Contacted</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="delivered">Delivered</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+          <div className="flex gap-2">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-2 border border-input rounded-md bg-background text-sm min-w-[140px]"
+            >
+              <option value="all">All Status</option>
+              <option value="new">🔴 New</option>
+              <option value="contacted">🟡 Contacted</option>
+              <option value="confirmed">🔵 Confirmed</option>
+              <option value="delivered">🟢 Delivered</option>
+              <option value="cancelled">⚫ Cancelled</option>
+            </select>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <ArrowUpDown className="h-4 w-4" />
+                  Sort
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => { setSortBy('date'); setSortOrder('desc'); }}>
+                  Newest First
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setSortBy('date'); setSortOrder('asc'); }}>
+                  Oldest First
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setSortBy('status'); setSortOrder('asc'); }}>
+                  Status (New → Delivered)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Customer</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Medicines</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Prescription</TableHead>
-                <TableHead>Actions</TableHead>
+              <TableRow className="bg-gray-50 hover:bg-gray-50">
+                <TableHead className="font-semibold text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Customer
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Phone
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Medicines
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4" />
+                    Status
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Date
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4" />
+                    Prescription
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700 text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredOrders.length > 0 ? filteredOrders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell>
+                <TableRow key={order.id} className="hover:bg-blue-50/50 transition-colors">
+                  <TableCell className="py-4">
                     <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+                        {(order.customer_name || 'U')[0].toUpperCase()}
+                      </div>
                       <div>
                         <div className="font-medium">
-                          {order.customer_name || 'Unknown'}
+                          {order.customer_name || 'Unknown Customer'}
                         </div>
                         {order.customer_address && (
-                          <div className="text-sm text-muted-foreground truncate max-w-32">
-                            {order.customer_address}
+                          <div className="text-xs text-muted-foreground truncate max-w-32">
+                            📍 {order.customer_address}
                           </div>
                         )}
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-4">
                     <div className="flex items-center gap-1">
                       <Phone className="h-4 w-4 text-muted-foreground" />
                       {order.customer_phone}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-4">
                     <div className="max-w-48">
                       {order.medicines && order.medicines.length > 0 ? (
                         <div className="space-y-1">
@@ -237,10 +356,10 @@ export function PharmacyOrdersList({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-4">
                     {getStatusBadge(order.lead_status)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-4">
                     <div className="flex items-center gap-1">
                       <Clock className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">
@@ -248,7 +367,7 @@ export function PharmacyOrdersList({
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-4">
                     {order.prescription_image_url ? (
                       <Button
                         variant="outline"
@@ -265,13 +384,13 @@ export function PharmacyOrdersList({
                       <span className="text-muted-foreground text-sm">None</span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-4">
                     <div className="flex items-center gap-2">
                       <Button
-                        variant="outline"
+                        variant="default"
                         size="sm"
                         onClick={() => onViewDetails(order.id)}
-                        className="gap-2"
+                        className="gap-2 bg-blue-600 hover:bg-blue-700"
                       >
                         <Eye className="h-4 w-4" />
                         View
@@ -281,7 +400,7 @@ export function PharmacyOrdersList({
                           <Button
                             variant="outline"
                             size="sm"
-                            disabled={updating === order.id}
+                            disabled={updating === order.id || order.lead_status === 'delivered'}
                           >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
@@ -324,6 +443,23 @@ export function PharmacyOrdersList({
           </Table>
         </div>
       </CardContent>
+      
+      <AlertDialog open={confirmDelivery.show} onOpenChange={(open) => setConfirmDelivery({orderId: '', show: open})}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Order Delivery</AlertDialogTitle>
+            <AlertDialogDescription>
+              Once marked as delivered, this order will become view-only and cannot be modified. Are you sure you want to proceed?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeliveryUpdate} className="bg-green-600 hover:bg-green-700">
+              Yes, Mark as Delivered
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
