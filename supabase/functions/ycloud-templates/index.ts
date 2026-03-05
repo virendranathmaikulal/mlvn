@@ -7,6 +7,7 @@ const corsHeaders = {
 
 const YCLOUD_API_KEY = Deno.env.get('YCLOUD_API_KEY');
 const YCLOUD_BASE_URL = 'https://api.ycloud.com/v2';
+const WABA_ID = Deno.env.get('WABA_ID');
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -26,10 +27,13 @@ serve(async (req) => {
     let response;
 
     if (action === 'create') {
+      const payload = { ...params, wabaId: WABA_ID };
+      console.log('Creating template with payload:', payload);
+      
       response = await fetch(`${YCLOUD_BASE_URL}/whatsapp/templates`, {
         method: 'POST',
         headers,
-        body: JSON.stringify(params),
+        body: JSON.stringify(payload),
       });
     } else if (action === 'list') {
       console.log('Fetching templates from YCloud...');
