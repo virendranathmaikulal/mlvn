@@ -31,27 +31,35 @@ serve(async (req) => {
     }
 
     // Delete in correct order to avoid FK violations
-    // 1. Delete pharmacy_notifications (references order_leads)
-    await supabase
-      .from('pharmacy_notifications')
-      .delete()
-      .in('order_lead_id', 
-        supabase.from('order_leads').select('id').in('conversation_id', conversationIds)
-      );
+    // 1. Get order_lead IDs first
+    const { data: orderLeadsToDelete } = await supabase
+      .from('order_leads')
+      .select('id')
+      .in('conversation_id', conversationIds);
 
-    // 2. Delete order_leads
+    const orderLeadIds = orderLeadsToDelete?.map(o => o.id) || [];
+
+    // 2. Delete pharmacy_notifications
+    if (orderLeadIds.length > 0) {
+      await supabase
+        .from('pharmacy_notifications')
+        .delete()
+        .in('order_lead_id', orderLeadIds);
+    }
+
+    // 3. Delete order_leads
     await supabase
       .from('order_leads')
       .delete()
       .in('conversation_id', conversationIds);
 
-    // 3. Delete conversation messages
+    // 4. Delete conversation messages
     await supabase
       .from('whatsapp_conversation_messages')
       .delete()
       .in('conversation_id', conversationIds);
 
-    // 4. Delete conversations
+    // 5. Delete conversations
     const { error: conversationsError } = await supabase
       .from('whatsapp_conversations')
       .delete()
