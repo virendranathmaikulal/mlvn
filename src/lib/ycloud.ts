@@ -33,7 +33,7 @@ export async function createTemplate(params: CreateTemplateParams): Promise<YClo
 
 export async function getTemplates(): Promise<YCloudTemplate[]> {
   const data = await callYCloudFunction('list');
-  return data.templates || [];
+  return data.items || [];
 }
 
 export async function syncTemplateStatus(name: string, language: string): Promise<YCloudTemplate> {
