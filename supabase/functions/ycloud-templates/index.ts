@@ -35,6 +35,24 @@ serve(async (req) => {
         headers,
         body: JSON.stringify(payload),
       });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        const errorData = JSON.parse(errorText);
+        
+        if (errorData.error?.code === 'BAD_REQUEST' && errorData.error?.message?.includes('already English content')) {
+          console.log('Template created but duplicate language warning');
+          return new Response(JSON.stringify({ 
+            name: params.name, 
+            language: params.language,
+            status: 'PENDING',
+            components: params.components 
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        throw new Error(errorText);
+      }
     } else if (action === 'list') {
       console.log('Fetching templates from YCloud...');
       response = await fetch(`${YCLOUD_BASE_URL}/whatsapp/templates`, {
@@ -42,10 +60,19 @@ serve(async (req) => {
         headers,
       });
     } else if (action === 'sync') {
-      response = await fetch(`${YCLOUD_BASE_URL}/whatsapp/templates/${params.name}/${params.language}`, {
+      response = await fetch(`${YCLOUD_BASE_URL}/whatsapp/templates?name=${params.name}&language=${params.language}`, {
         method: 'GET',
         headers,
       });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.items && data.items.length > 0) {
+          return new Response(JSON.stringify(data.items[0]), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
     } else {
       throw new Error('Invalid action');
     }
