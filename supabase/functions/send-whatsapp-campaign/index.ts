@@ -8,6 +8,7 @@ const corsHeaders = {
 
 const YCLOUD_API_KEY = Deno.env.get('YCLOUD_API_KEY');
 const YCLOUD_BASE_URL = 'https://api.ycloud.com/v2';
+const WHATSAPP_FROM_NUMBER = Deno.env.get('WHATSAPP_FROM_NUMBER');
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -41,6 +42,7 @@ serve(async (req) => {
       console.log('\n--- Sending to:', message.phone_number);
       
       const payload = {
+        from: WHATSAPP_FROM_NUMBER,
         to: message.phone_number,
         type: 'template',
         template: {
