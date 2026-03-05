@@ -48,6 +48,7 @@ export default function CreateWhatsAppCampaign() {
         .select('*')
         .eq('user_id', user?.id)
         .eq('status', 'active')
+        .eq('ycloud_status', 'APPROVED')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -79,15 +80,18 @@ export default function CreateWhatsAppCampaign() {
   };
 
   const handleLaunchCampaign = async () => {
-    if (!user) return;
+    if (!user || !selectedTemplateId) return;
 
     setIsLaunching(true);
     try {
+      const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
+      
       const { data: campaign, error: campaignError } = await supabase
         .from('whatsapp_campaigns')
         .insert({
           user_id: user.id,
           name: campaignName,
+          template_id: selectedTemplateId,
           message_content: messageTemplate,
           media_url: mediaUrl || null,
           status: 'running',
@@ -111,6 +115,7 @@ export default function CreateWhatsAppCampaign() {
         campaign_id: campaign.id,
         contact_id: contact.id,
         phone_number: contact.phone,
+        template_id: selectedTemplateId,
         message_content: replaceVariables(messageTemplate, contact),
         media_url: mediaUrl || null,
         status: 'pending'
@@ -122,9 +127,20 @@ export default function CreateWhatsAppCampaign() {
 
       if (messagesError) throw messagesError;
 
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-whatsapp-campaign`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ campaignId: campaign.id }),
+      });
+
+      if (!response.ok) throw new Error('Failed to send messages');
+
       toast({
-        title: "Campaign Created!",
-        description: `${contacts.length} messages queued for sending`,
+        title: "Campaign Launched!",
+        description: `Sending messages to ${contacts.length} contacts`,
       });
 
       navigate('/dashboard/whatsapp');
@@ -199,10 +215,10 @@ export default function CreateWhatsAppCampaign() {
                   <Input value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="e.g., Summer Sale 2024" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Use Template (Optional)</label>
-                  <Select value={selectedTemplateId} onValueChange={handleTemplateSelect}>
+                  <label className="block text-sm font-medium mb-2">Select Template *</label>
+                  <Select value={selectedTemplateId} onValueChange={handleTemplateSelect} required>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a template" />
+                      <SelectValue placeholder="Select an approved template" />
                     </SelectTrigger>
                     <SelectContent>
                       {templates.map((template) => (
@@ -217,23 +233,21 @@ export default function CreateWhatsAppCampaign() {
                   </Select>
                   {templates.length === 0 && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      No templates found. <button onClick={() => navigate('/whatsapp/templates')} className="text-primary underline">Create one</button>
+                      No approved templates found. <button onClick={() => navigate('/whatsapp/templates')} className="text-primary underline">Import from YCloud</button>
                     </p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Message Template *</label>
+                  <label className="block text-sm font-medium mb-2">Message Preview</label>
                   <Textarea 
                     value={messageTemplate} 
-                    onChange={(e) => setMessageTemplate(e.target.value)}
-                    placeholder="Use {{phone}}, {{name}} for dynamic fields&#10;&#10;Example: Hi {{name}}, check out our summer sale!"
+                    readOnly
+                    disabled
+                    placeholder="Select a template to preview message"
                     rows={6}
+                    className="bg-muted"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">Use double curly braces for variables: {`{{name}}, {{phone}}`}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Media URL (Optional)</label>
-                  <Input value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} placeholder="https://example.com/image.jpg" />
+                  <p className="text-xs text-muted-foreground mt-1">Only approved templates can be sent via WhatsApp</p>
                 </div>
               </div>
             </div>
@@ -269,7 +283,7 @@ export default function CreateWhatsAppCampaign() {
           disabled={
             currentStep === steps.length - 1 || 
             (currentStep === 0 && contacts.length === 0) ||
-            (currentStep === 1 && (!campaignName || !messageTemplate))
+            (currentStep === 1 && (!campaignName || !selectedTemplateId))
           }
         >
           Next <ChevronRight className="h-4 w-4" />
