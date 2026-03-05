@@ -69,14 +69,25 @@ export default function WhatsAppTemplates() {
     if (!user) return;
     setIsLoading(true);
     try {
+      console.log('Fetching templates from YCloud...');
       const ycloudTemplates = await ycloud.getTemplates();
-      const approvedTemplates = ycloudTemplates.filter(t => t.status === 'APPROVED');
+      console.log('YCloud templates:', ycloudTemplates);
+      
+      const approvedTemplates = ycloudTemplates.filter(t => 
+        t.status === 'APPROVED' || t.status === 'ACTIVE'
+      );
+      console.log('Approved/Active templates:', approvedTemplates);
+
+      if (approvedTemplates.length === 0) {
+        toast({ title: "Info", description: "No approved/active templates found in YCloud" });
+        return;
+      }
 
       for (const template of approvedTemplates) {
         const bodyComponent = template.components.find(c => c.type === 'BODY');
         const headerComponent = template.components.find(c => c.type === 'HEADER');
 
-        await supabase.from('whatsapp_templates').upsert({
+        const insertData = {
           user_id: user.id,
           name: template.name.replace(/_/g, ' '),
           template_content: bodyComponent?.text || '',
@@ -88,12 +99,25 @@ export default function WhatsAppTemplates() {
           components: template.components,
           status: 'active',
           last_synced_at: new Date().toISOString()
-        }, { onConflict: 'ycloud_name,language' });
+        };
+        
+        console.log('Inserting template:', insertData);
+        
+        const { error } = await supabase.from('whatsapp_templates').upsert(insertData, { 
+          onConflict: 'ycloud_name,language',
+          ignoreDuplicates: false 
+        });
+        
+        if (error) {
+          console.error('Insert error:', error);
+          throw error;
+        }
       }
 
       toast({ title: "Success", description: `Imported ${approvedTemplates.length} templates` });
       fetchTemplates();
     } catch (error: any) {
+      console.error('Import error:', error);
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
