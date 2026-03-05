@@ -91,6 +91,15 @@ serve(async (req) => {
     console.log('\n=== CAMPAIGN COMPLETED ===');
     console.log('Success:', successCount, '| Failed:', failCount);
 
+    await supabase
+      .from('whatsapp_campaigns')
+      .update({ 
+        status: failCount === 0 ? 'completed' : 'completed_with_errors',
+        messages_sent: successCount,
+        messages_failed: failCount
+      })
+      .eq('id', campaignId);
+
     return new Response(JSON.stringify({ success: true, sent: successCount, failed: failCount }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
