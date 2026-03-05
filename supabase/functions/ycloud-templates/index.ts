@@ -15,6 +15,8 @@ serve(async (req) => {
 
   try {
     const { action, ...params } = await req.json();
+    console.log('YCloud function called:', action, params);
+    console.log('YCLOUD_API_KEY exists:', !!YCLOUD_API_KEY);
 
     const headers = {
       'X-API-Key': YCLOUD_API_KEY || '',
@@ -30,6 +32,7 @@ serve(async (req) => {
         body: JSON.stringify(params),
       });
     } else if (action === 'list') {
+      console.log('Fetching templates from YCloud...');
       response = await fetch(`${YCLOUD_BASE_URL}/whatsapp/templates`, {
         method: 'GET',
         headers,
@@ -43,16 +46,22 @@ serve(async (req) => {
       throw new Error('Invalid action');
     }
 
+    console.log('YCloud API response status:', response.status);
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'YCloud API error');
+      const errorText = await response.text();
+      console.error('YCloud API error:', errorText);
+      throw new Error(errorText || 'YCloud API error');
     }
 
     const data = await response.json();
+    console.log('YCloud API response data:', data);
+    
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
+    console.error('Function error:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
