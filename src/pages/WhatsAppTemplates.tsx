@@ -103,14 +103,10 @@ export default function WhatsAppTemplates() {
         
         console.log('Inserting template:', insertData);
         
-        const { error } = await supabase.from('whatsapp_templates').upsert(insertData, { 
-          onConflict: 'ycloud_name,language',
-          ignoreDuplicates: false 
-        });
+        const { error } = await supabase.from('whatsapp_templates').insert(insertData);
         
         if (error) {
           console.error('Insert error:', error);
-          throw error;
         }
       }
 
