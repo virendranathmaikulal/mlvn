@@ -49,16 +49,20 @@ export default function WhatsAppTemplates() {
   }, [user]);
 
   const fetchTemplates = async () => {
+    setIsLoading(true);
     try {
+      console.log('Fetching templates for user:', user?.id);
       const { data, error } = await supabase
         .from('whatsapp_templates')
         .select('*')
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false });
 
+      console.log('Fetched templates:', data);
       if (error) throw error;
       setTemplates(data || []);
     } catch (error: any) {
+      console.error('Fetch error:', error);
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -69,21 +73,29 @@ export default function WhatsAppTemplates() {
     if (!user) return;
     setIsLoading(true);
     try {
-      console.log('Fetching templates from YCloud...');
+      console.log('=== IMPORT STARTED ===');
+      console.log('User ID:', user.id);
+      
       const ycloudTemplates = await ycloud.getTemplates();
-      console.log('YCloud templates:', ycloudTemplates);
+      console.log('YCloud API returned:', ycloudTemplates.length, 'templates');
       
       const approvedTemplates = ycloudTemplates.filter(t => 
         t.status === 'APPROVED' || t.status === 'ACTIVE'
       );
-      console.log('Approved/Active templates:', approvedTemplates);
+      console.log('Filtered approved/active:', approvedTemplates.length, 'templates');
 
       if (approvedTemplates.length === 0) {
+        console.log('No templates to import');
         toast({ title: "Info", description: "No approved/active templates found in YCloud" });
         return;
       }
 
+      let successCount = 0;
+      let errorCount = 0;
+
       for (const template of approvedTemplates) {
+        console.log('\n--- Processing template:', template.name);
+        
         const bodyComponent = template.components.find(c => c.type === 'BODY');
         const headerComponent = template.components.find(c => c.type === 'HEADER');
 
@@ -92,7 +104,7 @@ export default function WhatsAppTemplates() {
           name: template.name.replace(/_/g, ' '),
           template_content: bodyComponent?.text || '',
           media_url: headerComponent?.format === 'IMAGE' ? '' : null,
-          category: template.category.toLowerCase(),
+          category: template.category === 'MARKETING' ? 'promotional' : 'transactional',
           language: template.language,
           ycloud_name: template.name,
           ycloud_status: template.status,
@@ -101,19 +113,32 @@ export default function WhatsAppTemplates() {
           last_synced_at: new Date().toISOString()
         };
         
-        console.log('Inserting template:', insertData);
+        console.log('Insert data:', JSON.stringify(insertData, null, 2));
         
-        const { error } = await supabase.from('whatsapp_templates').insert(insertData);
+        const { data: inserted, error } = await supabase.from('whatsapp_templates').insert(insertData).select();
         
         if (error) {
-          console.error('Insert error:', error);
+          console.error('❌ INSERT FAILED:', error.message);
+          console.error('Error details:', JSON.stringify(error, null, 2));
+          errorCount++;
+        } else {
+          console.log('✅ INSERT SUCCESS:', inserted);
+          successCount++;
         }
       }
 
-      toast({ title: "Success", description: `Imported ${approvedTemplates.length} templates` });
-      fetchTemplates();
+      console.log('\n=== IMPORT COMPLETED ===');
+      console.log('Success:', successCount, '| Errors:', errorCount);
+      
+      toast({ 
+        title: "Import Complete", 
+        description: `Success: ${successCount}, Failed: ${errorCount}`,
+        variant: errorCount > 0 ? "destructive" : "default"
+      });
+      
+      await fetchTemplates();
     } catch (error: any) {
-      console.error('Import error:', error);
+      console.error('=== IMPORT ERROR ===', error);
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
