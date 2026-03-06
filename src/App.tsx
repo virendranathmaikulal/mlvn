@@ -2,13 +2,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { VoiceFeatureGuard } from "@/components/gaurds/VoiceFeatureGuard.tsx";
 import { WhatsAppFeatureGuard } from "@/components/gaurds/WhatsAppFeatureGuard.tsx";
 import { DashboardRouter } from "@/components/gaurds/DashboardRouter.tsx";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { APP_CONFIG } from "@/config/appConfig";
 import Homepage from "./pages/Homepage";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -122,11 +123,13 @@ const App = () => (
                 <AppLayout><Settings /></AppLayout>
               </ProtectedRoute>
             } />
-            <Route path="/support" element={
-              <ProtectedRoute>
-                <AppLayout><Support /></AppLayout>
-              </ProtectedRoute>
-            } />
+            {APP_CONFIG.supportEnabled && (
+              <Route path="/support" element={
+                <ProtectedRoute>
+                  <AppLayout><Support /></AppLayout>
+                </ProtectedRoute>
+              } />
+            )}
             
             <Route path="*" element={<NotFound />} />
           </Routes>
