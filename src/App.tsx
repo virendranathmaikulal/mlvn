@@ -37,7 +37,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             {/* Public routes without sidebar */}
-            <Route path="/" element={<Homepage />} />
+            <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             
