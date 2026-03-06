@@ -8,6 +8,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff, Check, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { APP_CONFIG } from "@/config/appConfig";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -95,7 +96,7 @@ const Signup = () => {
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
             <h1 className="text-3xl font-bold bg-gradient-brand bg-clip-text text-transparent">
-              Orbital Flows
+              {APP_CONFIG.shortName}
             </h1>
           </Link>
         </div>
@@ -104,7 +105,7 @@ const Signup = () => {
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Create Your Account</CardTitle>
             <CardDescription>
-              Start your journey with Orbital Flows
+              Start your journey with {APP_CONFIG.shortName}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -272,7 +273,7 @@ const Signup = () => {
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-muted-foreground">
-          © 2025 Orbital Flows. All rights reserved.
+          © 2025 {APP_CONFIG.appName}. All rights reserved.
         </div>
       </div>
     </div>

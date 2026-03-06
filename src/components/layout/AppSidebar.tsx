@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { Home, Mic, Phone, MessageCircle, Send, FileText, Users, Settings, HelpCircle, Pill } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
+import { APP_CONFIG } from "@/config/appConfig";
 import {
   Sidebar,
   SidebarContent,
@@ -30,7 +31,7 @@ const whatsappItems = [
 const sharedItems = [
   { title: "Contacts", url: "/contacts", icon: Users },
   { title: "Settings", url: "/settings", icon: Settings },
-  { title: "Support", url: "/support", icon: HelpCircle },
+  ...(APP_CONFIG.supportEnabled ? [{ title: "Support", url: "/support", icon: HelpCircle }] : []),
 ];
 
 export function AppSidebar() {

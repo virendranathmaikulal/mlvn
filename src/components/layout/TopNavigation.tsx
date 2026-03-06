@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { User, Settings, LogOut } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { APP_CONFIG } from "@/config/appConfig";
 
 const getPageTitle = (pathname: string) => {
   switch (pathname) {
@@ -61,7 +62,7 @@ export function TopNavigation() {
           <div className="w-8 h-8 bg-gradient-brand rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-sm">O</span>
           </div>
-          <span className="font-semibold text-lg">Orbital Flows</span>
+          <span className="font-semibold text-lg">{APP_CONFIG.shortName}</span>
         </div>
       </div>
 

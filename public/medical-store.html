@@ -63,7 +63,7 @@
         }
         .hero h1 { font-size: 3rem; font-weight: 800; margin-bottom: 20px; line-height: 1.2; letter-spacing: -1px; }
         .hero p { font-size: 1.25rem; max-width: 700px; margin: 0 auto 40px; opacity: 0.9; }
-        .hero-btns { display: flex; gap: 16px; justify-content: center; }
+        .hero-btns { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
 
         /* Trust Bar */
         .trust-bar { background: var(--light-bg); padding: 40px 0; border-bottom: 1px solid #e2e8f0; }
@@ -136,6 +136,7 @@
             .brand .title { font-size: 1.1rem; }
             .brand .subtitle { font-size: 0.8rem; }
             .header-grid nav { display: none; }
+            .hero-btns a { width: 100%; text-align: center; }
             .hero { padding: 60px 0; }
             .hero h1 { font-size: 1.75rem; }
             .hero p { font-size: 1rem; }
@@ -188,7 +189,9 @@
                     <a href="#wholesale">Wholesale</a>
                     <a href="#findus">Find Us</a>
                 </nav>
-                <a href="tel:+919128029456" class="btn btn-primary" style="padding: 10px 20px;">Call Pharmacist</a>
+                <div style="display: flex; gap: 10px;">
+                    <a href="/login" class="btn btn-primary" style="padding: 10px 20px;">Login / Dashboard</a>
+                </div>
             </div>
         </div>
     </div>
@@ -206,6 +209,8 @@
 <!--        <p>Your health is our legacy. Providing Pilibhit with genuine medicines, expert consultation, and surgical supplies for over 98+ years.</p>-->
         <div class="hero-btns">
             <a href="https://wa.me/919128029456" class="btn btn-primary">Order via WhatsApp</a>
+            <a href="tel:+919128029456" class="btn btn-outline">Call Pharmacist</a>
+            <a href="/login" class="btn btn-outline">Go to Dashboard</a>
         </div>
     </div>
 </section>
