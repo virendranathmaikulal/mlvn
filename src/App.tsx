@@ -11,6 +11,7 @@ import { DashboardRouter } from "@/components/gaurds/DashboardRouter.tsx";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { APP_CONFIG } from "@/config/appConfig";
 import Homepage from "./pages/Homepage";
+import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import VoiceDashboard from "./pages/VoiceDashboard";
