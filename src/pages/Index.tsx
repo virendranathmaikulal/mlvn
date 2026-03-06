@@ -10,11 +10,11 @@ const Index = () => {
     if (user) {
       navigate('/dashboard');
     } else {
-      window.location.href = '/medical-store.html';
+      window.location.replace('/medical-store.html');
     }
   }, [user, navigate]);
 
-  return null;
+  return <div>Loading...</div>;
 };
 
 export default Index;
