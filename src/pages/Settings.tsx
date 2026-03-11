@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +15,6 @@ export default function Settings() {
   const [fullName, setFullName] = useState('');
   const [company, setCompany] = useState('');
   const [phone, setPhone] = useState('');
-  const [campaignNotifications, setCampaignNotifications] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwordData, setPasswordData] = useState({
@@ -134,25 +132,29 @@ export default function Settings() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Phone className="h-5 w-5" />
-                <span>Voice Campaigns</span>
+            {profile?.has_voice_integration && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Phone className="h-5 w-5" />
+                  <span>Voice Campaigns</span>
+                </div>
+                <Badge variant="default">
+                  Enabled
+                </Badge>
               </div>
-              <Badge variant={profile?.has_voice_integration ? "default" : "secondary"}>
-                {profile?.has_voice_integration ? "Enabled" : "Disabled"}
-              </Badge>
-            </div>
+            )}
             
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MessageCircle className="h-5 w-5" />
-                <span>WhatsApp Integration</span>
+            {profile?.has_whatsapp_integration && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="h-5 w-5" />
+                  <span>WhatsApp Integration</span>
+                </div>
+                <Badge variant="default">
+                  Enabled
+                </Badge>
               </div>
-              <Badge variant={profile?.has_whatsapp_integration ? "default" : "secondary"}>
-                {profile?.has_whatsapp_integration ? "Enabled" : "Disabled"}
-              </Badge>
-            </div>
+            )}
           </div>
           
           {!profile?.has_voice_integration && !profile?.has_whatsapp_integration && (
@@ -209,53 +211,34 @@ export default function Settings() {
                 className="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Call Rate ({profile?.currency || 'INR'})</label>
-              <input 
-                type="text" 
-                value={profile?.call_rate || '0'}
-                disabled
-                className="w-full p-3 border border-input rounded-lg bg-muted text-muted-foreground"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Available Minutes</label>
-              <input 
-                type="text" 
-                value={profile?.available_minutes || '0'}
-                disabled
-                className="w-full p-3 border border-input rounded-lg bg-muted text-muted-foreground"
-              />
-            </div>
+            {profile?.has_voice_integration && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Call Rate ({profile?.currency || 'INR'})</label>
+                  <input 
+                    type="text" 
+                    value={profile?.call_rate || '0'}
+                    disabled
+                    className="w-full p-3 border border-input rounded-lg bg-muted text-muted-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Available Minutes</label>
+                  <input 
+                    type="text" 
+                    value={profile?.available_minutes || '0'}
+                    disabled
+                    className="w-full p-3 border border-input rounded-lg bg-muted text-muted-foreground"
+                  />
+                </div>
+              </>
+            )}
           </div>
           <Separator />
           <div className="flex justify-end">
             <Button onClick={handleSaveChanges} disabled={isSaving}>
               {isSaving ? "Saving..." : "Save Changes"}
             </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Notification Settings */}
-      <Card className="shadow-soft border-card-border">
-        <CardHeader>
-          <CardTitle>Notification Preferences</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-medium">Campaign Notifications</h4>
-                <p className="text-sm text-muted-foreground">
-                  Get notified when campaigns start, complete, or encounter issues
-                </p>
-              </div>
-              <Switch 
-                checked={campaignNotifications}
-                onCheckedChange={setCampaignNotifications}
-              />
-            </div>
           </div>
         </CardContent>
       </Card>
