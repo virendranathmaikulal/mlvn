@@ -22,10 +22,10 @@ const voiceItems = [
 ];
 
 const whatsappItems = [
-  { title: "WhatsApp Dashboard", url: "/dashboard/whatsapp", icon: MessageCircle },
+  { title: "Pharmacy Orders", url: "/pharmacy", icon: Pill },
+  { title: "Recent Campaigns", url: "/dashboard/whatsapp", icon: MessageCircle },
   { title: "Campaigns", url: "/campaigns/whatsapp", icon: Send },
   { title: "Templates", url: "/whatsapp/templates", icon: FileText },
-  { title: "Pharmacy Orders", url: "/pharmacy", icon: Pill },
 ];
 
 const sharedItems = [
