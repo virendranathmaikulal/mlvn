@@ -1,6 +1,7 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { TopNavigation } from "./TopNavigation";
+import { APP_CONFIG } from "@/config/appConfig";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -18,7 +19,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </main>
           <footer className="border-t bg-card px-6 py-4 flex-shrink-0">
             <p className="text-sm text-muted-foreground text-center">
-              Powered by Orbital Flows | © 2025
+              Powered by {APP_CONFIG.shortName} | © 2025
             </p>
           </footer>
         </div>

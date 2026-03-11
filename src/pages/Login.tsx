@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { APP_CONFIG } from "@/config/appConfig";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -44,7 +45,7 @@ const Login = () => {
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
             <h1 className="text-3xl font-bold bg-gradient-brand bg-clip-text text-transparent">
-              Orbital Flows
+              {APP_CONFIG.shortName}
             </h1>
           </Link>
         </div>
@@ -53,7 +54,7 @@ const Login = () => {
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Welcome Back</CardTitle>
             <CardDescription>
-              Sign in to your Orbital Flows account
+              Sign in to your {APP_CONFIG.shortName} account
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -129,7 +130,7 @@ const Login = () => {
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-muted-foreground">
-          © 2025 Orbital Flows. All rights reserved.
+          © 2025 {APP_CONFIG.appName}. All rights reserved.
         </div>
       </div>
     </div>
