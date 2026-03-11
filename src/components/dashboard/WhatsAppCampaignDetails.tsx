@@ -67,18 +67,40 @@ export function WhatsAppCampaignDetails({
   const fetchRecipients = async () => {
     setLoadingRecipients(true);
     try {
-      const { data, error } = await supabase
+      // First get messages
+      const { data: messagesData, error: messagesError } = await supabase
         .from('whatsapp_messages')
-        .select('id, phone_number, status, sent_at, error_message')
+        .select('id, phone_number, status, sent_at, error_message, contact_id')
         .eq('campaign_id', campaignId)
         .order('sent_at', { ascending: false });
 
-      if (error) throw error;
+      if (messagesError) throw messagesError;
 
-      const formattedRecipients = data?.map(msg => ({
+      // Get unique contact IDs
+      const contactIds = messagesData
+        ?.map(msg => msg.contact_id)
+        .filter(id => id != null) || [];
+
+      // Fetch contact names if we have contact IDs
+      let contactsMap: Record<string, string> = {};
+      if (contactIds.length > 0) {
+        const { data: contactsData } = await supabase
+          .from('contacts')
+          .select('id, name')
+          .in('id', contactIds);
+
+        if (contactsData) {
+          contactsMap = contactsData.reduce((acc, contact) => {
+            acc[contact.id] = contact.name;
+            return acc;
+          }, {} as Record<string, string>);
+        }
+      }
+
+      const formattedRecipients = messagesData?.map(msg => ({
         id: msg.id,
         phone_number: msg.phone_number,
-        contact_name: undefined,
+        contact_name: msg.contact_id ? contactsMap[msg.contact_id] : undefined,
         status: msg.status,
         sent_at: msg.sent_at,
         error_message: msg.error_message
