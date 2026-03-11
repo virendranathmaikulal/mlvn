@@ -35,7 +35,6 @@ interface Recipient {
   contact_name?: string;
   status: 'sent' | 'delivered' | 'failed' | 'pending';
   sent_at?: string;
-  delivered_at?: string;
   error_message?: string;
 }
 
@@ -70,7 +69,7 @@ export function WhatsAppCampaignDetails({
     try {
       const { data, error } = await supabase
         .from('whatsapp_messages')
-        .select('id, phone_number, status, sent_at, delivered_at, error_message, contacts(name)')
+        .select('id, phone_number, status, sent_at, error_message')
         .eq('campaign_id', campaignId)
         .order('sent_at', { ascending: false });
 
@@ -79,15 +78,15 @@ export function WhatsAppCampaignDetails({
       const formattedRecipients = data?.map(msg => ({
         id: msg.id,
         phone_number: msg.phone_number,
-        contact_name: (msg.contacts as any)?.name,
+        contact_name: undefined,
         status: msg.status,
         sent_at: msg.sent_at,
-        delivered_at: msg.delivered_at,
         error_message: msg.error_message
       })) || [];
 
       setRecipients(formattedRecipients);
     } catch (error: any) {
+      console.error('Error loading recipients:', error);
       toast({
         title: "Error",
         description: "Failed to load recipients",
@@ -161,7 +160,7 @@ export function WhatsAppCampaignDetails({
           </div>
         </CardHeader>
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Campaign Stats */}
             <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
               <div className="flex items-center gap-3">
@@ -178,17 +177,7 @@ export function WhatsAppCampaignDetails({
                 <Send className="h-5 w-5 text-gray-600" />
                 <div>
                   <p className="text-xs text-muted-foreground">Messages Sent</p>
-                  <p className="font-bold text-2xl">{campaign.messages_sent}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Delivery Rate</p>
-                  <p className="font-bold text-2xl text-green-600">{getDeliveryRate()}%</p>
+                  <p className="font-bold text-2xl">{campaign.messages_sent || campaign.total_recipients || 0}</p>
                 </div>
               </div>
             </div>
@@ -265,12 +254,6 @@ export function WhatsAppCampaignDetails({
                           Sent At
                         </div>
                       </TableHead>
-                      <TableHead className="font-semibold text-gray-700">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4" />
-                          Delivered At
-                        </div>
-                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -279,7 +262,7 @@ export function WhatsAppCampaignDetails({
                         <TableCell className="py-4">
                           <div className="flex items-center gap-2">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
-                              {(recipient.contact_name || 'U')[0].toUpperCase()}
+                              {(recipient.contact_name || recipient.phone_number)[0].toUpperCase()}
                             </div>
                             <span className="font-medium">
                               {recipient.contact_name || 'Unknown'}
@@ -303,15 +286,10 @@ export function WhatsAppCampaignDetails({
                             {formatDateTime(recipient.sent_at)}
                           </span>
                         </TableCell>
-                        <TableCell className="py-4">
-                          <span className="text-sm">
-                            {formatDateTime(recipient.delivered_at)}
-                          </span>
-                        </TableCell>
                       </TableRow>
                     )) : (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8">
+                        <TableCell colSpan={4} className="text-center py-8">
                           <div className="flex flex-col items-center gap-2">
                             <Users className="h-8 w-8 text-muted-foreground" />
                             <p className="text-muted-foreground">No recipients found</p>
