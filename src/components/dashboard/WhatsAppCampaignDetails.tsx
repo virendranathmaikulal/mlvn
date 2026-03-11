@@ -32,7 +32,6 @@ import { useToast } from "@/hooks/use-toast";
 interface Recipient {
   id: string;
   phone_number: string;
-  contact_name?: string;
   status: 'sent' | 'delivered' | 'failed' | 'pending';
   sent_at?: string;
   error_message?: string;
@@ -67,40 +66,17 @@ export function WhatsAppCampaignDetails({
   const fetchRecipients = async () => {
     setLoadingRecipients(true);
     try {
-      // First get messages
-      const { data: messagesData, error: messagesError } = await supabase
+      const { data, error } = await supabase
         .from('whatsapp_messages')
-        .select('id, phone_number, status, sent_at, error_message, contact_id')
+        .select('id, phone_number, status, sent_at, error_message')
         .eq('campaign_id', campaignId)
         .order('sent_at', { ascending: false });
 
-      if (messagesError) throw messagesError;
+      if (error) throw error;
 
-      // Get unique contact IDs
-      const contactIds = messagesData
-        ?.map(msg => msg.contact_id)
-        .filter(id => id != null) || [];
-
-      // Fetch contact names if we have contact IDs
-      let contactsMap: Record<string, string> = {};
-      if (contactIds.length > 0) {
-        const { data: contactsData } = await supabase
-          .from('contacts')
-          .select('id, name')
-          .in('id', contactIds);
-
-        if (contactsData) {
-          contactsMap = contactsData.reduce((acc, contact) => {
-            acc[contact.id] = contact.name;
-            return acc;
-          }, {} as Record<string, string>);
-        }
-      }
-
-      const formattedRecipients = messagesData?.map(msg => ({
+      const formattedRecipients = data?.map(msg => ({
         id: msg.id,
         phone_number: msg.phone_number,
-        contact_name: msg.contact_id ? contactsMap[msg.contact_id] : undefined,
         status: msg.status,
         sent_at: msg.sent_at,
         error_message: msg.error_message
@@ -254,12 +230,6 @@ export function WhatsAppCampaignDetails({
                     <TableRow className="bg-gray-50 hover:bg-gray-50">
                       <TableHead className="font-semibold text-gray-700">
                         <div className="flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          Contact
-                        </div>
-                      </TableHead>
-                      <TableHead className="font-semibold text-gray-700">
-                        <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4" />
                           Phone Number
                         </div>
@@ -284,17 +254,11 @@ export function WhatsAppCampaignDetails({
                         <TableCell className="py-4">
                           <div className="flex items-center gap-2">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
-                              {(recipient.contact_name || recipient.phone_number)[0].toUpperCase()}
+                              <Phone className="h-4 w-4" />
                             </div>
                             <span className="font-medium">
-                              {recipient.contact_name || 'Unknown'}
+                              {recipient.phone_number}
                             </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-4 w-4 text-muted-foreground" />
-                            {recipient.phone_number}
                           </div>
                         </TableCell>
                         <TableCell className="py-4">
@@ -311,7 +275,7 @@ export function WhatsAppCampaignDetails({
                       </TableRow>
                     )) : (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center py-8">
+                        <TableCell colSpan={3} className="text-center py-8">
                           <div className="flex flex-col items-center gap-2">
                             <Users className="h-8 w-8 text-muted-foreground" />
                             <p className="text-muted-foreground">No recipients found</p>
