@@ -223,12 +223,6 @@ export function WhatsAppCampaignsList({
                 </TableHead>
                 <TableHead className="font-semibold text-gray-700">
                   <div className="flex items-center gap-2">
-                    <Send className="h-4 w-4" />
-                    Delivery
-                  </div>
-                </TableHead>
-                <TableHead className="font-semibold text-gray-700">
-                  <div className="flex items-center gap-2">
                     <Filter className="h-4 w-4" />
                     Status
                   </div>
@@ -262,25 +256,6 @@ export function WhatsAppCampaignsList({
                     </div>
                   </TableCell>
                   <TableCell className="py-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <div className="text-sm">
-                          <span className="font-medium text-green-600">{campaign.messages_delivered}</span>
-                          <span className="text-muted-foreground"> / {campaign.messages_sent}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-green-500 transition-all"
-                            style={{ width: `${getDeliveryRate(campaign)}%` }}
-                          />
-                        </div>
-                        <span className="text-xs text-muted-foreground">{getDeliveryRate(campaign)}%</span>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-4">
                     {getStatusBadge(campaign.status)}
                   </TableCell>
                   <TableCell className="py-4">
@@ -305,7 +280,7 @@ export function WhatsAppCampaignsList({
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={5} className="text-center py-8">
                     <div className="flex flex-col items-center gap-2">
                       <Send className="h-8 w-8 text-muted-foreground" />
                       <p className="text-muted-foreground">
