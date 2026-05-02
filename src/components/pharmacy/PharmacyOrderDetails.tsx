@@ -32,11 +32,14 @@ import {
   Save,
   X,
   Plus,
-  Trash2
+  Trash2,
+  Printer
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { PrintOrderModal } from "@/components/pharmacy/PrintOrderModal";
+import { PrintTemplate, printOrder } from "@/components/pharmacy/PrintTemplate";
 
 interface PharmacyMessage {
   id: string;
@@ -72,6 +75,12 @@ export function PharmacyOrderDetails({
   const [editedOrder, setEditedOrder] = useState<any>(null);
   const [updating, setUpdating] = useState(false);
   const [confirmDelivery, setConfirmDelivery] = useState(false);
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+
+  const handlePrintSizeSelect = (size: "small" | "large") => {
+    setPrintModalOpen(false);
+    setTimeout(() => printOrder(size), 100);
+  };
 
   if (isLoading || !orderData) {
     return (
@@ -234,8 +243,17 @@ export function PharmacyOrderDetails({
             </div>
             <div className="flex items-center gap-2">
               {getStatusBadge(order.lead_status)}
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setPrintModalOpen(true)}
+                className="gap-2 bg-gray-800 hover:bg-gray-900 no-print"
+              >
+                <Printer className="h-4 w-4" />
+                Print Order
+              </Button>
               {!isEditing && !isDelivered && (
-                <Button variant="outline" size="sm" onClick={startEditing} className="gap-2 border-blue-300 hover:bg-blue-50">
+                <Button variant="outline" size="sm" onClick={startEditing} className="gap-2 border-blue-300 hover:bg-blue-50 no-print">
                   <Edit className="h-4 w-4" />
                   Edit Order
                 </Button>
@@ -623,6 +641,16 @@ export function PharmacyOrderDetails({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Print size selector modal */}
+      <PrintOrderModal
+        open={printModalOpen}
+        onClose={() => setPrintModalOpen(false)}
+        onSelectSize={handlePrintSizeSelect}
+      />
+
+      {/* Hidden print template */}
+      <PrintTemplate order={order} />
     </div>
   );
 }

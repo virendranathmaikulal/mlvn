@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Package, Search, X, Eye, Clock, User, Phone, MoreHorizontal, Image as ImageIcon, Filter, ArrowUpDown } from "lucide-react";
+import { Package, Search, X, Eye, Clock, User, Phone, MoreHorizontal, Image as ImageIcon, Filter, ArrowUpDown, Printer } from "lucide-react";
+import { PrintOrderModal } from "@/components/pharmacy/PrintOrderModal";
+import { PrintTemplate, printOrder } from "@/components/pharmacy/PrintTemplate";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,6 +66,19 @@ export function PharmacyOrdersList({
   const [sortBy, setSortBy] = useState<'date' | 'status'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [confirmDelivery, setConfirmDelivery] = useState<{orderId: string, show: boolean}>({orderId: '', show: false});
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [orderToPrint, setOrderToPrint] = useState<PharmacyOrder | null>(null);
+
+  const handlePrintClick = (order: PharmacyOrder) => {
+    setOrderToPrint(order);
+    setPrintModalOpen(true);
+  };
+
+  const handlePrintSizeSelect = (size: "small" | "large") => {
+    setPrintModalOpen(false);
+    // Small delay so modal closes before print dialog opens
+    setTimeout(() => printOrder(size), 100);
+  };
 
   const filteredOrders = orders
     .filter(order => {
@@ -387,10 +402,19 @@ export function PharmacyOrdersList({
                   <TableCell className="py-4">
                     <div className="flex items-center gap-2">
                       <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePrintClick(order)}
+                        className="gap-1 border-gray-300 hover:bg-gray-100 no-print"
+                        title="Print Order"
+                      >
+                        <Printer className="h-4 w-4" />
+                      </Button>
+                      <Button
                         variant="default"
                         size="sm"
                         onClick={() => onViewDetails(order.id)}
-                        className="gap-2 bg-blue-600 hover:bg-blue-700"
+                        className="gap-2 bg-blue-600 hover:bg-blue-700 no-print"
                       >
                         <Eye className="h-4 w-4" />
                         View
@@ -460,6 +484,16 @@ export function PharmacyOrdersList({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Print size selector modal */}
+      <PrintOrderModal
+        open={printModalOpen}
+        onClose={() => setPrintModalOpen(false)}
+        onSelectSize={handlePrintSizeSelect}
+      />
+
+      {/* Hidden print template — rendered into DOM so window.print() can find it */}
+      {orderToPrint && <PrintTemplate order={orderToPrint} />}
     </Card>
   );
 }
