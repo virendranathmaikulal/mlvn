@@ -143,36 +143,129 @@ export const PrintTemplate = forwardRef<HTMLDivElement, PrintTemplateProps>(
 PrintTemplate.displayName = "PrintTemplate";
 
 /**
- * Utility: trigger browser print with the correct size class.
- * Call this instead of window.print() directly.
+ * Utility: open a new window, write the print content into it, and call print().
+ * This completely sidesteps the React DOM tree visibility problem.
  */
 export function printOrder(size: "small" | "large") {
-  document.body.classList.remove("print-small", "print-large");
-  document.body.classList.add(`print-${size}`);
+  const source = document.getElementById("print-template");
+  if (!source) {
+    console.error("printOrder: #print-template not found in DOM");
+    return;
+  }
 
-  // Inject a temporary <style> for @page so the page size matches the chosen format
-  const styleId = "__print_page_style__";
-  const existing = document.getElementById(styleId);
-  if (existing) existing.remove();
+  const isSmall = size === "small";
 
-  const pageStyle = document.createElement("style");
-  pageStyle.id = styleId;
-  pageStyle.textContent =
-    size === "small"
-      ? `@page { size: 72mm auto; margin: 2mm; }`
-      : `@page { size: A4; margin: 15mm; }`;
-  document.head.appendChild(pageStyle);
+  const pageCSS = isSmall
+    ? `@page { size: 72mm auto; margin: 2mm; }`
+    : `@page { size: A4; margin: 15mm; }`;
 
-  // Small delay so the class + style are applied before the print dialog opens
+  const sharedCSS = `
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 0;
+      background: #fff; color: #000;
+      font-family: ${isSmall ? "'Courier New', Courier, monospace" : "Arial, sans-serif"};
+      font-size: ${isSmall ? "9pt" : "11pt"};
+      line-height: ${isSmall ? "1.3" : "1.5"};
+      ${isSmall ? "width: 72mm; max-width: 72mm;" : ""}
+    }
+    .print-template {
+      padding: ${isSmall ? "2mm" : "10mm"};
+      ${isSmall ? "width: 68mm; max-width: 68mm;" : "width: 190mm; max-width: 190mm;"}
+    }
+    .print-header { text-align: center; margin-bottom: 6px; }
+    .print-store-name {
+      font-weight: 700; letter-spacing: 0.5px;
+      font-size: ${isSmall ? "11pt" : "18pt"};
+      ${isSmall ? "" : "font-family: Georgia, serif;"}
+    }
+    .print-estd { font-size: ${isSmall ? "7pt" : "10pt"}; letter-spacing: 1px; margin-top: 2px; }
+    .print-divider { border: none; border-top: 1px dashed #000; margin: 6px 0; }
+    .print-meta { margin-bottom: 4px; }
+    .print-meta-row { display: flex; justify-content: space-between; }
+    .print-label { font-weight: 600; }
+    .print-status { font-weight: 700; }
+    .print-section-title {
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+      margin: ${isSmall ? "4px 0 3px" : "8px 0 4px"};
+      border-bottom: 1px solid #000; padding-bottom: 2px;
+      font-size: ${isSmall ? "inherit" : "11pt"};
+    }
+    .print-customer-name { font-weight: 700; }
+    .print-customer-phone {
+      font-size: ${isSmall ? "13pt" : "13pt"};
+      font-weight: 700; letter-spacing: 1px; margin: 3px 0;
+    }
+    .print-customer-address { margin-top: 2px; word-break: break-word; }
+    .print-medicines-table {
+      width: 100%; border-collapse: collapse;
+      margin-top: ${isSmall ? "4px" : "6px"};
+    }
+    .print-th {
+      text-align: left; font-weight: 700;
+      border-bottom: 1px solid #000;
+      padding: ${isSmall ? "2px 3px" : "5px 8px"};
+      ${isSmall ? "" : "border: 1px solid #ccc; background: #f0f0f0;"}
+    }
+    .print-td {
+      padding: ${isSmall ? "2px 3px" : "5px 8px"};
+      vertical-align: top;
+      ${isSmall ? "" : "border: 1px solid #ccc;"}
+    }
+    .print-th-no, .print-td-no { width: ${isSmall ? "14px" : "30px"}; }
+    .print-th-qty, .print-td-qty { width: ${isSmall ? "36px" : "60px"}; text-align: right; }
+    .print-th-price, .print-td-price { width: ${isSmall ? "44px" : "70px"}; text-align: right; }
+    .print-med-name { font-weight: 700; }
+    .print-med-notes { font-weight: 400; font-size: 0.85em; }
+    .print-tr-even { background: ${isSmall ? "#f5f5f5" : "#fafafa"}; }
+    .print-no-items { font-style: italic; margin: 4px 0; }
+    .print-notes { font-size: 0.9em; margin: 3px 0; word-break: break-word; }
+    .print-footer {
+      text-align: center;
+      margin-top: ${isSmall ? "6px" : "14px"};
+      font-size: ${isSmall ? "0.85em" : "10pt"};
+      ${isSmall ? "" : "border-top: 1px solid #ccc; padding-top: 8px;"}
+    }
+    .print-footer-sub { margin-top: 2px; }
+    .print-footer-tiny { font-size: 0.8em; color: #555; }
+  `;
+
+  const printWindow = window.open("", "_blank", "width=800,height=600");
+  if (!printWindow) {
+    alert("Pop-up blocked. Please allow pop-ups for this site to print.");
+    return;
+  }
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Order Print</title>
+        <style>${pageCSS}\n${sharedCSS}</style>
+      </head>
+      <body>
+        ${source.outerHTML}
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+
+  // Wait for resources to load then print
+  printWindow.onload = () => {
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+  };
+
+  // Fallback if onload doesn't fire (some browsers)
   setTimeout(() => {
-    window.print();
-    // Clean up after the dialog closes
-    const cleanup = () => {
-      document.body.classList.remove("print-small", "print-large");
-      const s = document.getElementById(styleId);
-      if (s) s.remove();
-      window.removeEventListener("afterprint", cleanup);
-    };
-    window.addEventListener("afterprint", cleanup);
-  }, 50);
+    try {
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    } catch {
+      // already closed or printed
+    }
+  }, 800);
 }
