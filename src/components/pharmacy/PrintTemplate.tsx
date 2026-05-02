@@ -129,7 +129,7 @@ export const PrintTemplate = forwardRef<HTMLDivElement, PrintTemplateProps>(
         <div className="print-footer">
           <div>Thank you for your order!</div>
           <div className="print-footer-sub">
-            For queries call: <strong>{order.customer_phone}</strong>
+            For queries call: <strong>+91 9128029456</strong>
           </div>
           <div className="print-footer-sub print-footer-tiny">
             PT. Maikoo Lal Virendra Nath Medical Store — Estd. 1927
