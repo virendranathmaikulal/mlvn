@@ -1,0 +1,102 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Orbital Flows Design System - Business-focused voice agent platform */
+
+@layer base {
+  :root {
+    /* Core Brand Colors */
+    --background: 0 0% 100%;
+    --foreground: 210 17% 20%;
+    
+    /* Brand Primary - Trust Blue */
+    --primary: 215 100% 62%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 215 100% 55%;
+    --primary-light: 215 100% 95%;
+    
+    /* Brand Secondary - Calm Teal */
+    --secondary: 178 49% 55%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-light: 178 49% 95%;
+    
+    /* UI Components */
+    --card: 0 0% 100%;
+    --card-foreground: 210 17% 20%;
+    --card-border: 210 40% 95%;
+    
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    
+    --accent: 210 40% 96%;
+    --accent-foreground: 210 17% 20%;
+    
+    /* Status Colors */
+    --success: 122 39% 49%;
+    --success-foreground: 0 0% 100%;
+    --warning: 45 100% 51%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 4 90% 58%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Interactive Elements */
+    --border: 210 40% 92%;
+    --input: 210 40% 92%;
+    --ring: 215 100% 62%;
+    
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 210 17% 20%;
+    --sidebar-primary: 215 100% 62%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 100% 97%;
+    --sidebar-accent-foreground: 215 100% 30%;
+    --sidebar-border: 210 40% 95%;
+    --sidebar-ring: 215 100% 62%;
+    
+    /* Gradients */
+    --gradient-brand: linear-gradient(135deg, hsl(215 100% 62%), hsl(178 49% 55%));
+    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 40% 98%));
+    
+    /* Dropdown/Popover Colors */
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 17% 20%;
+
+    /* Shadows */
+    --shadow-soft: 0 1px 3px 0 hsl(210 40% 92% / 0.4);
+    --shadow-medium: 0 4px 6px -1px hsl(210 40% 92% / 0.3);
+    --shadow-large: 0 10px 25px -3px hsl(210 40% 92% / 0.4);
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    --radius: 8px;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Scrolling brand animation */
+  @keyframes scroll {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  .animate-scroll {
+    animation: scroll 30s linear infinite;
+  }
+}

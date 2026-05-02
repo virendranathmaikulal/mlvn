@@ -1,0 +1,634 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.4"
+  }
+  public: {
+    Tables: {
+      agents: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          status: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          status?: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      batch_calls: {
+        Row: {
+          agent_id: string | null
+          batch_id: string
+          batch_name: string | null
+          campaign_id: string | null
+          created_at: string
+          created_at_unix: number | null
+          id: string
+          last_updated_at_unix: number | null
+          phone_number_id: string | null
+          scheduled_time_unix: number | null
+          status: string | null
+          total_calls_dispatched: number | null
+          total_calls_scheduled: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_id?: string | null
+          batch_id: string
+          batch_name?: string | null
+          campaign_id?: string | null
+          created_at?: string
+          created_at_unix?: number | null
+          id?: string
+          last_updated_at_unix?: number | null
+          phone_number_id?: string | null
+          scheduled_time_unix?: number | null
+          status?: string | null
+          total_calls_dispatched?: number | null
+          total_calls_scheduled?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string | null
+          batch_id?: string
+          batch_name?: string | null
+          campaign_id?: string | null
+          created_at?: string
+          created_at_unix?: number | null
+          id?: string
+          last_updated_at_unix?: number | null
+          phone_number_id?: string | null
+          scheduled_time_unix?: number | null
+          status?: string | null
+          total_calls_dispatched?: number | null
+          total_calls_scheduled?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_calls_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_contact: {
+        Row: {
+          campaign_id: string
+          contact_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          campaign_id: string
+          contact_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          campaign_id?: string
+          contact_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      campaigns: {
+        Row: {
+          agent_id: string
+          campaign_start: string
+          created_at: string
+          elevenlabs_agent_id: string | null
+          id: string
+          launched_at: string | null
+          name: string
+          phone_number: string
+          phone_number_id: string | null
+          start_date: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          campaign_start?: string
+          created_at?: string
+          elevenlabs_agent_id?: string | null
+          id?: string
+          launched_at?: string | null
+          name: string
+          phone_number: string
+          phone_number_id?: string | null
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          campaign_start?: string
+          created_at?: string
+          elevenlabs_agent_id?: string | null
+          id?: string
+          launched_at?: string | null
+          name?: string
+          phone_number?: string
+          phone_number_id?: string | null
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_messages: {
+        Row: {
+          company: string
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          message: string
+          reason: string
+        }
+        Insert: {
+          company: string
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          message: string
+          reason: string
+        }
+        Update: {
+          company?: string
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          message?: string
+          reason?: string
+        }
+        Relationships: []
+      }
+      contacts: {
+        Row: {
+          additional_fields: Json | null
+          created_at: string
+          id: string
+          name: string
+          phone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          additional_fields?: Json | null
+          created_at?: string
+          id?: string
+          name: string
+          phone: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          additional_fields?: Json | null
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      conversations: {
+        Row: {
+          accepted_time_unix: number | null
+          agent_id: string | null
+          analysis: Json | null
+          call_duration_secs: number | null
+          call_successful: string | null
+          campaign_id: string | null
+          contact_name: string | null
+          conversation_id: string
+          conversation_summary: string | null
+          created_at: string
+          dynamic_variables: Json | null
+          elevenlabs_batch_id: string | null
+          has_audio: boolean | null
+          id: string
+          metadata: Json | null
+          phone_number: string | null
+          recipient_id: string | null
+          recipient_phone_number: string | null
+          start_time_unix: number | null
+          status: string | null
+          total_cost: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accepted_time_unix?: number | null
+          agent_id?: string | null
+          analysis?: Json | null
+          call_duration_secs?: number | null
+          call_successful?: string | null
+          campaign_id?: string | null
+          contact_name?: string | null
+          conversation_id: string
+          conversation_summary?: string | null
+          created_at?: string
+          dynamic_variables?: Json | null
+          elevenlabs_batch_id?: string | null
+          has_audio?: boolean | null
+          id?: string
+          metadata?: Json | null
+          phone_number?: string | null
+          recipient_id?: string | null
+          recipient_phone_number?: string | null
+          start_time_unix?: number | null
+          status?: string | null
+          total_cost?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accepted_time_unix?: number | null
+          agent_id?: string | null
+          analysis?: Json | null
+          call_duration_secs?: number | null
+          call_successful?: string | null
+          campaign_id?: string | null
+          contact_name?: string | null
+          conversation_id?: string
+          conversation_summary?: string | null
+          created_at?: string
+          dynamic_variables?: Json | null
+          elevenlabs_batch_id?: string | null
+          has_audio?: boolean | null
+          id?: string
+          metadata?: Json | null
+          phone_number?: string | null
+          recipient_id?: string | null
+          recipient_phone_number?: string | null
+          start_time_unix?: number | null
+          status?: string | null
+          total_cost?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_elevenlabs_batch_id_fkey"
+            columns: ["elevenlabs_batch_id"]
+            isOneToOne: false
+            referencedRelation: "batch_calls"
+            referencedColumns: ["batch_id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          available_minutes: number
+          call_rate: number
+          company: string | null
+          created_at: string
+          currency: string
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          available_minutes?: number
+          call_rate?: number
+          company?: string | null
+          created_at?: string
+          currency?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          available_minutes?: number
+          call_rate?: number
+          company?: string | null
+          created_at?: string
+          currency?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      recipients: {
+        Row: {
+          contact_name: string | null
+          conversation_initiation_client_data: Json | null
+          created_at: string
+          elevenlabs_batch_id: string
+          elevenlabs_conversation_id: string | null
+          elevenlabs_recipient_id: string
+          id: string
+          phone_number: string
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          contact_name?: string | null
+          conversation_initiation_client_data?: Json | null
+          created_at?: string
+          elevenlabs_batch_id: string
+          elevenlabs_conversation_id?: string | null
+          elevenlabs_recipient_id: string
+          id?: string
+          phone_number: string
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          contact_name?: string | null
+          conversation_initiation_client_data?: Json | null
+          created_at?: string
+          elevenlabs_batch_id?: string
+          elevenlabs_conversation_id?: string | null
+          elevenlabs_recipient_id?: string
+          id?: string
+          phone_number?: string
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipients_elevenlabs_batch_id_fkey"
+            columns: ["elevenlabs_batch_id"]
+            isOneToOne: false
+            referencedRelation: "batch_calls"
+            referencedColumns: ["batch_id"]
+          },
+          {
+            foreignKeyName: "recipients_elevenlabs_conversation_id_fkey"
+            columns: ["elevenlabs_conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["conversation_id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transcripts: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          full_transcript: Json | null
+          id: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          full_transcript?: Json | null
+          id?: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          full_transcript?: Json | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transcripts_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: true
+            referencedRelation: "conversations"
+            referencedColumns: ["conversation_id"]
+          },
+        ]
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const

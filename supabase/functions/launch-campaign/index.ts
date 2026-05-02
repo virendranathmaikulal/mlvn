@@ -1,0 +1,273 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { campaignId, callName, agentId, phoneNumberId, scheduledTimeUnix, recipients, contactsWithFields } = await req.json();
+    
+    const elevenlabsApiKey = Deno.env.get('ELEVENLABS_API_KEY');
+    
+    if (!elevenlabsApiKey) {
+      throw new Error('ElevenLabs API key not configured');
+    }
+
+    // Create Supabase client with ANONYMOUS key for regular access
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Create Supabase client with SERVICE_ROLE key for bypassing RLS
+    const serviceRoleSupabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      {
+        auth: {
+          persistSession: false,
+        },
+      }
+    );
+
+    // Get campaign and user data for minutes validation
+    const { data: campaignData, error: campaignError } = await serviceRoleSupabase
+      .from('campaigns')
+      .select('user_id')
+      .eq('id', campaignId)
+      .single();
+
+    if (campaignError) {
+      throw new Error(`Failed to fetch campaign: ${campaignError.message}`);
+    }
+
+    // Get user profile for minutes validation
+    const { data: profileData, error: profileError } = await serviceRoleSupabase
+      .from('profiles')
+      .select('available_minutes')
+      .eq('user_id', campaignData.user_id)
+      .single();
+
+    if (profileError) {
+      throw new Error(`Failed to fetch user profile: ${profileError.message}`);
+    }
+
+    // Calculate estimated minutes (2 minutes per contact)
+    const estimatedMinutes = recipients.length * 2;
+    const availableMinutes = profileData.available_minutes || 0;
+
+    // Validate sufficient minutes
+    if (estimatedMinutes > availableMinutes) {
+      throw new Error(`Insufficient minutes. Need ${estimatedMinutes} minutes but only ${availableMinutes} available.`);
+    }
+
+    // Deduct estimated minutes immediately to prevent double-spending
+    const { error: deductError } = await serviceRoleSupabase
+      .from('profiles')
+      .update({ available_minutes: availableMinutes - estimatedMinutes })
+      .eq('user_id', campaignData.user_id);
+
+    if (deductError) {
+      throw new Error(`Failed to deduct minutes: ${deductError.message}`);
+    }
+
+    console.log(`Deducted ${estimatedMinutes} minutes from user ${campaignData.user_id}. Remaining: ${availableMinutes - estimatedMinutes}`);
+
+    console.log('Launching campaign with data:', {
+      call_name: callName,
+      agent_id: agentId,
+      agent_phone_number_id: phoneNumberId,
+      scheduled_time_unix: scheduledTimeUnix,
+      recipients: recipients,
+      contactsWithFields: contactsWithFields
+    });
+
+    // Log each contact's structure for debugging
+    if (contactsWithFields && contactsWithFields.length > 0) {
+      console.log('Sample contact structure:', JSON.stringify(contactsWithFields[0], null, 2));
+      console.log('Total contacts with fields:', contactsWithFields.length);
+    }
+
+    // Prepare ElevenLabs API payload according to the official documentation
+    const elevenlabsPayload: any = {
+      call_name: callName, // Use call_name as per API spec
+      agent_id: agentId,
+      agent_phone_number_id: phoneNumberId, // Use agent_phone_number_id as per API spec
+      recipients: contactsWithFields ? contactsWithFields.map((contact: any) => {
+        // Extract dynamic variables from all contact fields
+        const dynamicVariables: any = {};
+        
+        // Add name if available
+        if (contact.name && contact.name.trim() !== '') {
+          dynamicVariables.user_name = contact.name.trim();
+        }
+        
+        // Process all fields from the contact object (these come from frontend spread)
+        Object.keys(contact).forEach(key => {
+          // Skip phone, id and other system fields - include everything else as dynamic variables
+          if (!['id', 'phone', 'phone_number', 'user_id', 'created_at', 'updated_at'].includes(key) && 
+              contact[key] !== null && 
+              contact[key] !== undefined && 
+              contact[key] !== '') {
+            // If it's the name field, use user_name key for clarity
+            const dynamicKey = key === 'name' ? 'user_name' : key;
+            dynamicVariables[dynamicKey] = typeof contact[key] === 'string' ? contact[key].trim() : contact[key];
+          }
+        });
+        
+        // ALSO extract from additional_fields JSON if it exists (from database)
+        if (contact.additional_fields && typeof contact.additional_fields === 'object') {
+          Object.keys(contact.additional_fields).forEach(key => {
+            // Skip phone-related fields and empty values
+            if (!['phone_number', 'phone', 'id'].includes(key) && 
+                contact.additional_fields[key] !== null && 
+                contact.additional_fields[key] !== undefined && 
+                contact.additional_fields[key] !== '') {
+              // Avoid overwriting if already set from direct contact fields
+              if (!dynamicVariables.hasOwnProperty(key)) {
+                dynamicVariables[key] = typeof contact.additional_fields[key] === 'string' ? 
+                  contact.additional_fields[key].trim() : contact.additional_fields[key];
+              }
+            }
+          });
+        }
+        
+        // Build recipient according to correct API structure
+        const recipient: any = {
+          phone_number: contact.phone
+        };
+        
+        // Add dynamic_variables wrapped in conversation_initiation_client_data as per API spec
+        if (Object.keys(dynamicVariables).length > 0) {
+          recipient.conversation_initiation_client_data = {
+            dynamic_variables: dynamicVariables
+          };
+          // Log extracted dynamic variables for debugging
+          console.log(`Dynamic variables for ${contact.phone}:`, JSON.stringify(dynamicVariables, null, 2));
+        } else {
+          console.log(`No dynamic variables found for ${contact.phone}`);
+        }
+        
+        return recipient;
+      }) : recipients.map((phone: string) => ({ phone_number: phone }))
+    };
+
+    // Add scheduled_time_unix if provided (use Unix timestamp format)
+    if (scheduledTimeUnix && scheduledTimeUnix > 0) {
+      elevenlabsPayload.scheduled_time_unix = scheduledTimeUnix;
+    }
+
+    // Log the exact payload being sent to ElevenLabs
+    console.log('ElevenLabs API payload:', JSON.stringify(elevenlabsPayload, null, 2));
+
+    const response = await fetch('https://api.elevenlabs.io/v1/convai/batch-calling/submit', {
+      method: 'POST',
+      headers: {
+        'xi-api-key': elevenlabsApiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(elevenlabsPayload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('ElevenLabs API error:', response.status, errorText);
+      throw new Error(`ElevenLabs API error: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log('Campaign launched successfully:', result);
+
+    // Update campaign status in database using the SERVICE_ROLE client
+    const { error: updateError } = await serviceRoleSupabase
+      .from('campaigns')
+      .update({
+        status: 'Launched',
+        launched_at: new Date().toISOString()
+      })
+      .eq('id', campaignId);
+
+    if (updateError) {
+      console.error('Error updating campaign status:', updateError);
+    }
+
+    // Save batch call data if available
+    if (result.id) {
+        const batchIdToUse = result.id; // API returns 'id' field as batch_id
+        console.log('Saving batch call data with batch_id:', batchIdToUse);
+        console.log('Full API response:', JSON.stringify(result));
+
+        // Use the SERVICE_ROLE client to insert data as it's a serverless function
+        const { error: batchError } = await serviceRoleSupabase
+          .from('batch_calls')
+          .insert({
+                     user_id: campaignData.user_id,
+                     campaign_id: campaignId,
+                     batch_id: batchIdToUse, // API 'id' maps to our 'batch_id'
+                     batch_name: result.name, // API 'name' maps to our 'batch_name'
+                     agent_id: result.agent_id,
+                     phone_number_id: result.phone_number_id,
+                     status: result.status,
+                     total_calls_scheduled: result.total_calls_scheduled,
+                     total_calls_dispatched: result.total_calls_dispatched,
+                     scheduled_time_unix: result.scheduled_time_unix,
+                     created_at_unix: result.created_at_unix,
+                     last_updated_at_unix: result.last_updated_at_unix,
+                });
+
+        if (batchError) {
+          console.error('Error saving batch call data:', batchError);
+        } else {
+          console.log('Batch call data saved successfully');
+          
+          // Start polling in background
+          console.log('Starting background polling for batch:', batchIdToUse);
+          fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/poll-batch-status`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              batchId: batchIdToUse,
+              userId: campaignData.user_id
+            })
+          }).catch(err => console.error('Error starting polling:', err));
+        // Record minutes transaction for audit trail
+        const { error: transactionError } = await serviceRoleSupabase
+          .from('minutes_transactions')
+          .insert({
+            user_id: campaignData.user_id,
+            campaign_id: campaignId,
+            batch_id: batchIdToUse,
+            transaction_type: 'deduction',
+            minutes: estimatedMinutes,
+            description: `Campaign launch: ${callName}`,
+            created_at: new Date().toISOString()
+          });
+
+        if (transactionError) {
+          console.error('Error recording minutes transaction:', transactionError);
+        }
+      }
+    }
+
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  } catch (error: any) {
+    console.error('Error in launch-campaign function:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});
