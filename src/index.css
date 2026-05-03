@@ -100,3 +100,14 @@
     animation: scroll 30s linear infinite;
   }
 }
+
+/* ============================================================
+   PHARMACY ORDER PRINT STYLES
+   ============================================================ */
+
+/* The print template is hidden on screen at all times.
+   Printing is handled by opening a dedicated print window (see PrintTemplate.tsx).
+   This keeps the React app DOM untouched during print. */
+#print-template {
+  display: none !important;
+}
