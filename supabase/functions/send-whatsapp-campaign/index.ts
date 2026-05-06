@@ -41,6 +41,76 @@ serve(async (req) => {
       const template = message.whatsapp_templates;
       console.log('\n--- Sending to:', message.phone_number);
       
+      // Transform stored template components into the send-time format required by the WhatsApp API.
+      //
+      // Components are stored in creation format. The send-time API expects:
+      //   HEADER (IMAGE): { type: "HEADER", parameters: [{ type: "image", image: { link: "<url>" } }] }
+      //                   Image URL comes from component.example.header_url (stored by YCloud).
+      //   BODY (static):  Omit — static text is baked into the approved template.
+      //   FOOTER:         Omit — always static.
+      //   BUTTONS:        Expand the single BUTTONS component into individual BUTTON components:
+      //                   { type: "BUTTON", sub_type: "URL"|"QUICK_REPLY"|"PHONE_NUMBER", index: N, parameters: [] }
+      const sendComponents: any[] = [];
+
+      for (const component of (template.components || [])) {
+        const type = (component.type || '').toUpperCase();
+
+        if (type === 'BUTTONS' && Array.isArray(component.buttons)) {
+          // Expand each button into its own BUTTON component
+          component.buttons.forEach((btn: any, index: number) => {
+            const buttonComponent: any = {
+              type: 'BUTTON',
+              sub_type: btn.type, // QUICK_REPLY, URL, PHONE_NUMBER, etc.
+              index,
+              parameters: [],
+            };
+            // Dynamic URL buttons (with {{1}} variable) need a text parameter for the suffix
+            if (btn.type === 'URL' && btn.url && btn.url.includes('{{1}}')) {
+              buttonComponent.parameters = [{ type: 'text', text: '' }];
+            }
+            sendComponents.push(buttonComponent);
+          });
+
+        } else if (type === 'HEADER') {
+          // Only include HEADER if it has a dynamic media URL to supply at send time.
+          // Fixed images approved during template creation are embedded — no component needed.
+          if (component.format === 'IMAGE') {
+            // Image URL is stored in components by YCloud under example.header_url
+            const imageUrl = component.example?.header_url?.[0] || '';
+            if (imageUrl) {
+              sendComponents.push({
+                type: 'HEADER',
+                parameters: [{ type: 'image', image: { link: imageUrl } }],
+              });
+            }
+          }
+          // TEXT/VIDEO/DOCUMENT headers are static — omit, baked into the approved template
+
+        } else if (type === 'BODY') {
+          // Only include BODY if it contains variables that need to be filled in
+          const bodyText: string = component.text || '';
+          const hasVariables = bodyText.includes('{{');
+          if (hasVariables) {
+            // Extract positional variables like {{1}}, {{2}} and replace with contact data
+            const parameters: any[] = [];
+            const varMatches = bodyText.match(/\{\{(\w+)\}\}/g) || [];
+            varMatches.forEach((match: string) => {
+              const key = match.replace(/\{\{|\}\}/g, '');
+              const value = message.contact_data?.[key] || '';
+              parameters.push({ type: 'text', text: value });
+            });
+            if (parameters.length > 0) {
+              sendComponents.push({ type: 'BODY', parameters });
+            }
+          }
+          // Static body — omit, text is baked into the approved template
+
+        } else if (type === 'FOOTER') {
+          // FOOTER is always static — omit at send time
+        }
+        // Any other component types: omit (creation-only fields)
+      }
+
       const payload = {
         from: WHATSAPP_FROM_NUMBER,
         to: message.phone_number,
@@ -48,7 +118,7 @@ serve(async (req) => {
         template: {
           name: template.ycloud_name,
           language: { code: template.language },
-          components: template.components
+          components: sendComponents
         }
       };
 

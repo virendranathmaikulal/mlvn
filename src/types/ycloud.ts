@@ -15,6 +15,10 @@ export interface YCloudComponent {
   text?: string;
   format?: YCloudMediaFormat;
   buttons?: YCloudButton[];
+  example?: {
+    header_url?: string[];   // YCloud stores the image URL here
+    body_text?: string[][];
+  };
 }
 
 export interface YCloudTemplate {
