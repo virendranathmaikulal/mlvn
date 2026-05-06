@@ -103,7 +103,9 @@ export default function WhatsAppTemplates() {
           user_id: user.id,
           name: template.name.replace(/_/g, ' '),
           template_content: bodyComponent?.text || '',
-          media_url: headerComponent?.format === 'IMAGE' ? '' : null,
+          media_url: headerComponent?.format === 'IMAGE'
+            ? (headerComponent.example?.header_url?.[0] || null)
+            : null,
           category: template.category === 'MARKETING' ? 'promotional' : 'transactional',
           language: template.language,
           ycloud_name: template.name,
