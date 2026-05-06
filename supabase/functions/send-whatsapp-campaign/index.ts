@@ -48,27 +48,38 @@ serve(async (req) => {
       //                   Image URL comes from component.example.header_url (stored by YCloud).
       //   BODY (static):  Omit — static text is baked into the approved template.
       //   FOOTER:         Omit — always static.
-      //   BUTTONS:        Expand the single BUTTONS component into individual BUTTON components:
-      //                   { type: "BUTTON", sub_type: "URL"|"QUICK_REPLY"|"PHONE_NUMBER", index: N, parameters: [] }
+      //   BUTTONS:        Only include buttons that need runtime parameters:
+      //                   - Dynamic URL (has {{1}}): { type: "BUTTON", sub_type: "URL", index, parameters: [{type:"text",text:"..."}] }
+      //                   - QUICK_REPLY:             { type: "BUTTON", sub_type: "QUICK_REPLY", index, parameters: [{type:"payload",payload:"..."}] }
+      //                   - Static URL / PHONE_NUMBER: omit entirely — fully defined in the approved template.
       const sendComponents: any[] = [];
 
       for (const component of (template.components || [])) {
         const type = (component.type || '').toUpperCase();
 
         if (type === 'BUTTONS' && Array.isArray(component.buttons)) {
-          // Expand each button into its own BUTTON component
           component.buttons.forEach((btn: any, index: number) => {
-            const buttonComponent: any = {
-              type: 'BUTTON',
-              sub_type: btn.type, // QUICK_REPLY, URL, PHONE_NUMBER, etc.
-              index,
-              parameters: [],
-            };
-            // Dynamic URL buttons (with {{1}} variable) need a text parameter for the suffix
+            // Static URL buttons (no {{1}}) and PHONE_NUMBER buttons are fully defined
+            // in the approved template — do NOT include them in the send payload at all.
+            // Only include BUTTON components that actually need a runtime parameter:
+            //   - Dynamic URL buttons with {{1}} suffix → need a text parameter
+            //   - QUICK_REPLY buttons → need a payload parameter
             if (btn.type === 'URL' && btn.url && btn.url.includes('{{1}}')) {
-              buttonComponent.parameters = [{ type: 'text', text: '' }];
+              sendComponents.push({
+                type: 'BUTTON',
+                sub_type: 'URL',
+                index,
+                parameters: [{ type: 'text', text: '' }],
+              });
+            } else if (btn.type === 'QUICK_REPLY') {
+              sendComponents.push({
+                type: 'BUTTON',
+                sub_type: 'QUICK_REPLY',
+                index,
+                parameters: [{ type: 'payload', payload: btn.text }],
+              });
             }
-            sendComponents.push(buttonComponent);
+            // Static URL and PHONE_NUMBER buttons: omit entirely
           });
 
         } else if (type === 'HEADER') {
